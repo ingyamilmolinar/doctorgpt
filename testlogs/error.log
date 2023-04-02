@@ -1,0 +1,7 @@
+yarn run v1.22.19
+$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts
+[INFO] 15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)
+[INFO]  DB ready
+[INFO]  Auth ready
+[INFO]  Apollo setup
+[INFO]  Server started at http://localhost:5555/graphql 🚀

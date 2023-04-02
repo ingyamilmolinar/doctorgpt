@@ -1,0 +1,45 @@
+yarn run v1.22.19
+$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts
+[INFO] 15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)
+[INFO]  DB ready
+[INFO]  Auth ready
+[INFO]  Apollo setup
+[INFO]  Server started at http://localhost:5555/graphql 🚀
+
+
+
+Query: Me
+POST /graphql 200 241.389 ms - 21
+
+
+
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."password", "public"."User"."firstName", "public"."User"."lastName", "public"."User"."avatar", "public"."User"."role", "public"."User"."bio", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE "public"."User"."email" = $2 LIMIT $2 OFFSET $3
+[ERROR]  PrismaClientKnownRequestError:
+Invalid `prisma.user.findFirst()` invocation in
+/Users/yamilmolinar/Repos/boilerplate/packages/api/src/modules/user/user.service.ts:32:36
+
+  29 }
+  30
+  31 async checkUserExists(where: UserWhereInput) {
+→ 32   const user = await prisma.user.findFirst(
+The table `public.User` does not exist in the current database.
+    at RequestHandler.handleRequestError (/Users/yamilmolinar/Repos/boilerplate/node_modules/@prisma/client/runtime/index.js:30851:13)
+    at RequestHandler.request (/Users/yamilmolinar/Repos/boilerplate/node_modules/@prisma/client/runtime/index.js:30834:12)
+    at PrismaClient._request (/Users/yamilmolinar/Repos/boilerplate/node_modules/@prisma/client/runtime/index.js:31812:16)
+    at UserService.checkUserExists (/Users/yamilmolinar/Repos/boilerplate/packages/api/src/modules/user/user.service.ts:32:18)
+    at UserService.register (/Users/yamilmolinar/Repos/boilerplate/packages/api/src/modules/user/user.service.ts:26:5)
+    at UserResolver.register (/Users/yamilmolinar/Repos/boilerplate/packages/api/src/modules/user/user.resolver.ts:93:18)
+    at dispatchHandler (/Users/yamilmolinar/Repos/boilerplate/node_modules/type-graphql/dist/resolvers/helpers.js:82:24)
+    at /Users/yamilmolinar/Repos/boilerplate/node_modules/type-graphql/dist/resolvers/helpers.js:83:26
+    at ErrorInterceptor (/Users/yamilmolinar/Repos/boilerplate/packages/api/src/lib/globalMiddleware.ts:29:12)
+    at dispatchHandler (/Users/yamilmolinar/Repos/boilerplate/node_modules/type-graphql/dist/resolvers/helpers.js:82:24) {
+  code: 'P2021',
+  clientVersion: '4.4.0',
+  meta: { table: 'public.User' }
+}
+
+
+Mutation: Register
+POST /graphql 200 365.616 ms - 2139
+
