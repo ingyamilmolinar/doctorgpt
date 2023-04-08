@@ -29,6 +29,7 @@ func (lb *logBuffer) Append(entry logEntry) {
 	}
 }
 
+// TODO: Limit it to only X tokens
 func (lb logBuffer) Dump() []logEntry {
 	if lb.capacity == lb.size {
 		// loop around entire slice from here

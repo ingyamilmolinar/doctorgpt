@@ -1,0 +1,13 @@
+prompt: "You are ErrorDebuggingGPT. Your sole purpose in this world is to help software engineers by diagnosing software system errors and bugs that can occur in any type of computer system. The message following the first line containing \"ERROR:\" up until the end of the prompt is a computer error no more and no less. It is your job to try to diagnose and fix what went wrong. Ready?\nERROR:\n$ERROR"
+parsers:
+  - regex: '^\[(\d{4}\/\d{6}\.\d{6}):(?P<LEVEL>\w+):([\w\.\_]+)\(\d+\)\]\s+(?P<MESSAGE>.*)$'
+    triggers:
+      "LEVEL": "ERROR"
+  - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
+    triggers:
+      "LEVEL": "Default"
+      "MESSAGE": "(?i)ERROR:"
+  - regex: '^\[(?P<LEVEL>\w+)\]\s+(?P<MESSAGE>.*)$'
+    triggers:
+      "LEVEL": "ERROR"
+  - regex: '^(?P<MESSAGE>.*)$'

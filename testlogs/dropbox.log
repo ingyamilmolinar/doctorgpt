@@ -1,0 +1,5 @@
+[1217/070353.692622:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.
+[1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000
+[1217/201832.973523:ERROR:disk_cache.cc(184)] Unable to create cache
+[1217/201832.973606:ERROR:shader_disk_cache.cc(622)] Shader Cache Creation failed: -2
+[1217/234231.659591:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.
