@@ -13,10 +13,11 @@ DoctorGPT will start tailing `program.log` (without stopping). Each user-defined
 - `--logfile (string)` log file to tail and monitor
 - `--configfile (string)` yaml config file location
 - `--outdir (string)` diagnosis files directory (created if it does not exist)
-- `--bundlingtimeoutseconds (int)` wait some time for logs to come-in after the triggered line (for multi-line error dumps) (default: 5)
-- `--debug (bool)` debug logging (default: true)
-- `--buffersize (int)` maximum number of log entries per buffer  (default: 100)
-- `--maxtokens (int)` maximum number of tokens allowed in API (default: 8000)
+- `--bundlingtimeoutseconds (int)` wait some time for logs to come-in after the triggered line (for multi-line error dumps) (`default: 5`)
+- `--debug (bool)` debug logging (`default: true`)
+- `--buffersize (int)` maximum number of log entries per buffer  (`default: 100`)
+- `--maxtokens (int)` maximum number of tokens allowed in API (`default: 8000`)
+- `--gptmodel (string)` GPT model to use (`default: "gpt-4"`). For list of models see: [OpenAI API Models](https://platform.openai.com/docs/models/overview)
 
 ## Configuration
 See example yaml documentation:
@@ -121,15 +122,15 @@ Build from source:
 ## Features (To be enhanced)
 1. Environment independent self-sufficient lightweight (8.3MB) binary. (Windows support is missing but could be easily added)
 2. Configurable chatGPT prompt
-3. Match multiple log formats in a single file
-4. Match multiple parsers for the same line
+3. Match multiple log formats in a single log file
+4. Match multiple parsers for the same log entry
 5. Powerful regex format (Perl/Go flavor)
+6. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
 1. Test dividing log contexts per span, thread, routine or procedure
-2. Maximize the amount of log context in the diagnosis
-3. Lightweight docker image
-4. Support log filtering
+2. Lightweight docker image
+3. Support log filtering
 
 ## Future work
 1. Support other GPT versions (GPT3.5)

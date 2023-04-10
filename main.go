@@ -20,6 +20,7 @@ func main() {
 	logBundlingTimeoutInSecs := flag.Int("bundlingtimeoutseconds", 5, "log bundling timeout duration in seconds")
 	bufferSize := flag.Int("buffersize", 100, "max log entries per ring-buffer")
 	maxTokens := flag.Int("maxtokens", 8000, "max tokens for context per API request")
+	gptModel := flag.String("gptmodel", "gpt-4", "GPT model to use for diagnosis")
 	flag.Parse()
 
 	// Init logger
@@ -65,7 +66,7 @@ func main() {
 
 	// This will effectively never end (it doesn't handle EOF)
 	timeoutDuration := time.Duration(*logBundlingTimeoutInSecs) * time.Second
-	monitorLogLoop(log, *logFilePath, *outputDir, apiKey, *bufferSize, *maxTokens, parsers, handleTrigger, timeoutDuration)
+	monitorLogLoop(log, *logFilePath, *outputDir, apiKey, *gptModel, *bufferSize, *maxTokens, parsers, handleTrigger, timeoutDuration)
 }
 
 func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider configProvider) ([]parser, error) {
@@ -103,7 +104,7 @@ func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider 
 	return parsers, nil
 }
 
-func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey string, bufferSize, maxTokens int, parsers []parser, handler handler, timeout time.Duration) {
+func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, bufferSize, maxTokens int, parsers []parser, handler handler, timeout time.Duration) {
 	// Set up tail object to read log file
 	tailConfig := tail.Config{
 		Follow:   true,
@@ -203,7 +204,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey string, 
 			// TODO: We need persistance to make sure all errors are reported
 			// TODO: Expose N diagnosis per error configuration
 			go func() {
-				err := handler(log, fileName, outputDir, apiKey, entryToDiagnose, dumpedBuffer)
+				err := handler(log, fileName, outputDir, apiKey, model, entryToDiagnose, dumpedBuffer)
 				if err != nil {
 					log.Errorf("Handler failed: %v", err)
 				}	
