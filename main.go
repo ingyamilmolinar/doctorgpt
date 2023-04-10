@@ -80,7 +80,7 @@ func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider 
 
 	var parsers []parser
 	for _, parser := range config.Parsers {
-		parser, err := newParser(log, parser.Regex, parser.Triggers)
+		parser, err := newParser(log, parser.Regex, parser.Filters, parser.Triggers)
 		if err != nil {
 			return nil, fmt.Errorf("invalid config file: %w", err)
 		}
@@ -153,8 +153,9 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 
 		lineSpoofed := false
 		// Check if the log entry indicates an error
-		log.Debugf("Should diagnose: %v", entry.Triggered)
-		if entry.Triggered {
+		log.Debugf("Should filter: %v", entry.Filtered)
+		log.Debugf("Should diagnose: %v", !entry.Filtered && entry.Triggered)
+		if !entry.Filtered && entry.Triggered {
 			entryToDiagnose := entry
 			log.Infof("Entry to diagnose: %s", entryToDiagnose.Text)
 			// Append subsequent log entries to the buffer until a new log level is detected
@@ -182,7 +183,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 					}
 
 					// TODO: Have an optional "bundle" line limit to avoid packing too much context after the error
-					if matched == len(parsers)-1 || matched == parserMatched && entry.Triggered {
+					if matched == len(parsers)-1 || matched == parserMatched && (!entry.Filtered && entry.Triggered) {
 						// Matched default parser OR
 						// If follow-ups match the same parser and they are triggers
 						log.Debugf("Appending to buffer: (%s)", l)
@@ -202,7 +203,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 
 			// Async call the ChatGPT API
 			// TODO: We need persistance to make sure all errors are reported
-			// TODO: Expose N diagnosis per error configuration
+			// TODO: Expose N prompts and N diagnosis per error configuration
 			go func() {
 				err := handler(log, fileName, outputDir, apiKey, model, entryToDiagnose, dumpedBuffer)
 				if err != nil {
