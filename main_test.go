@@ -141,7 +141,7 @@ func TestDropboxLogExample(t *testing.T) {
 		},
 	}
 	// create validation function
-	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey string, entryToDiagnose logEntry, logContext []logEntry) error {
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
 		require.Equal(t, expectedEntry, entryToDiagnose)
 		require.Equal(t, expectedContext, logContext)
 		wg.Done()
@@ -150,7 +150,7 @@ func TestDropboxLogExample(t *testing.T) {
 	// Send process for a spin.
 	wg.Add(1)
 	go func(t *testing.T){
-		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", 100, 8000, []parser{
+		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 100, 8000, []parser{
 			dropboxParser,
 		}, handler, 100*time.Millisecond)
 		t.FailNow()

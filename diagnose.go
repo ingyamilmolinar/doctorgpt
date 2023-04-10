@@ -13,9 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-type handler func(log *zap.SugaredLogger, fileName, outputDir, apiKey string, entryToDiagnose logEntry, logContext []logEntry) error 
+type handler func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error 
 
-func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey string, entryToDiagnose logEntry, logContext []logEntry) error {
+func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
 	err := backoff.Retry(func () error {
 		// create file and write to it
 		errorLocation := fileName+":"+strconv.Itoa(entryToDiagnose.LineNo)
@@ -41,7 +41,7 @@ func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey string, e
 		if err != nil {
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}
-		suggestion, err := suggestion(apiKey, basePrompt, context)
+		suggestion, err := suggestion(model, apiKey, basePrompt, context)
 		if err != nil {
 			return fmt.Errorf("error diagnosing using the openai API: %w", err)
 		}
@@ -67,14 +67,13 @@ func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey string, e
 	return err
 }
 
-func suggestion(key, basePrompt, errorMsg string) (string, error) {
+func suggestion(model, key, basePrompt, errorMsg string) (string, error) {
 	prompt := strings.Replace(basePrompt, errorPlaceholder, errorMsg, 1)
 	client := openai.NewClient(key)
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			// TODO: Support other models
-			Model: openai.GPT4,
+			Model: model,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleUser,
