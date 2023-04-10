@@ -53,12 +53,14 @@ Build from source:
 4. Support log filtering
 
 ## Future work
-5. Production readiness (security, auth, monitoring, more tests...)
-6. Release strategy & CI
-7. Sentry SDK integration
-8. Helm chart?
-9. Windows / Mac support?
-9. Other AI APIs?
+1. Production readiness (security, auth, monitoring, optimization, more tests...)
+2. Release strategy & CI
+3. Sentry SDK integration
+4. Helm chart?
+5. Windows / Mac support?
+6. Other AI APIs?
+7. Send diagnosis requests to a server for later consumption (agent/server architecture)?
+8. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
 
 ## Testing (To be enhanced)
 `go test ./...`
