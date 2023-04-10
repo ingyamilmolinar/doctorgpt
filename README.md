@@ -10,13 +10,13 @@ DoctorGPT is a lightweight self-contained binary that monitors your application 
 DoctorGPT will start tailing `program.log` (without stopping). Each user-defined trigger for a user-defined parser log line event will generate a diagnosis file under directory `~/errors`. `config.yaml` file is used at startup to configure the program.
 
 ## CLI flags
-`--logfile (string)` log file to tail and monitor
-`--configfile (string)` yaml config file location
-`--outdir (string)` diagnosis files directory (created if it does not exist)
-`--bundlingtimeoutseconds (int)` wait some time for logs to come-in after the triggered line (for multi-line error dumps) (default: 5)
-`--debug (bool)` debug logging (default: true)
-`--buffersize (int)` maximum number of log entries per buffer  (default: 100)
-`--maxtokens (int)` maximum number of tokens allowed in API (default: 8000)
+- `--logfile (string)` log file to tail and monitor
+- `--configfile (string)` yaml config file location
+- `--outdir (string)` diagnosis files directory (created if it does not exist)
+- `--bundlingtimeoutseconds (int)` wait some time for logs to come-in after the triggered line (for multi-line error dumps) (default: 5)
+- `--debug (bool)` debug logging (default: true)
+- `--buffersize (int)` maximum number of log entries per buffer  (default: 100)
+- `--maxtokens (int)` maximum number of tokens allowed in API (default: 8000)
 
 ## Configuration
 See example yaml documentation:
