@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Parse command-line arguments
-	// TODO: Monitor all logs in a directory 
+	// TODO: Monitor all logs in a directory
 	logFilePath := flag.String("logfile", "", "path to log file")
 	outputDir := flag.String("outdir", "", "path to output directory")
 	configFilePath := flag.String("configfile", "", "path to config file")
@@ -107,8 +107,8 @@ func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider 
 func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, bufferSize, maxTokens int, parsers []parser, handler handler, timeout time.Duration) {
 	// Set up tail object to read log file
 	tailConfig := tail.Config{
-		Follow:   true,
-		ReOpen:   true,
+		Follow: true,
+		ReOpen: true,
 	}
 	t, err := tail.TailFile(fileName, tailConfig)
 	if err != nil {
@@ -122,7 +122,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 	lineNum := 0
 	for line := range t.Lines {
 		lineNum++
-		top:
+	top:
 		// Parse the log entry
 		entry, parserMatched, err := parseLogEntry(log, parsers, line.Text, lineNum)
 		if err != nil {
@@ -160,44 +160,44 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 			// Append subsequent log entries to the buffer until a new log level is detected
 			// Wait for input or timeout in N seconds
 			timec := time.After(timeout)
-			outer:
+		outer:
 			for {
 				select {
-					case <-timec:
-						log.Info("Timeout!")
-						break outer // timed out
-					// Process previous entry if exist
-					case l, ok := <-t.Lines:
-						if !ok {
-							log.Debug("Log line channel closed or empty")
-							break outer
-						}
-						// increment line number
-						lineNum++
-						// Parse lines until we hit a known log line that's not the generic one
-						var matched int
-						entry, matched, err = parseLogEntry(log, parsers, l.Text, lineNum)
-						if err != nil {
-							log.Fatalf("Error parsing log entry (%s)", l)
-						}
+				case <-timec:
+					log.Info("Timeout!")
+					break outer // timed out
+				// Process previous entry if exist
+				case l, ok := <-t.Lines:
+					if !ok {
+						log.Debug("Log line channel closed or empty")
+						break outer
+					}
+					// increment line number
+					lineNum++
+					// Parse lines until we hit a known log line that's not the generic one
+					var matched int
+					entry, matched, err = parseLogEntry(log, parsers, l.Text, lineNum)
+					if err != nil {
+						log.Fatalf("Error parsing log entry (%s)", l)
+					}
 
-						// TODO: Have an optional "bundle" line limit to avoid packing too much context after the error 
-						if matched == len(parsers)-1 || matched == parserMatched && entry.Triggered {
-							// Matched default parser OR
-							// If follow-ups match the same parser and they are triggers
-							log.Debugf("Appending to buffer: (%s)", l)
-							buffer := logBuffers[key]
-							buffer.Append(entry)
-						} else {
-							// Spoof line and go back to top
-							log.Debugf("Spoofing: (%s)", l)
-							line = l
-							lineSpoofed = true
-						}
+					// TODO: Have an optional "bundle" line limit to avoid packing too much context after the error
+					if matched == len(parsers)-1 || matched == parserMatched && entry.Triggered {
+						// Matched default parser OR
+						// If follow-ups match the same parser and they are triggers
+						log.Debugf("Appending to buffer: (%s)", l)
+						buffer := logBuffers[key]
+						buffer.Append(entry)
+					} else {
+						// Spoof line and go back to top
+						log.Debugf("Spoofing: (%s)", l)
+						line = l
+						lineSpoofed = true
+					}
 				}
 			}
 
-			// dump log context buffer 
+			// dump log context buffer
 			dumpedBuffer := logBuffers[key].Dump()
 
 			// Async call the ChatGPT API
@@ -207,7 +207,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 				err := handler(log, fileName, outputDir, apiKey, model, entryToDiagnose, dumpedBuffer)
 				if err != nil {
 					log.Errorf("Handler failed: %v", err)
-				}	
+				}
 			}()
 			if lineSpoofed {
 				lineSpoofed = false
@@ -221,11 +221,10 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 func exists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
-	 return true, nil
+		return true, nil
 	}
 	if os.IsNotExist(err) {
 		return false, nil
 	}
 	return false, err
 }
-

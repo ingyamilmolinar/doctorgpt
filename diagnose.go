@@ -3,23 +3,23 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/cenkalti/backoff/v4"
+	openai "github.com/sashabaranov/go-openai"
+	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-	openai "github.com/sashabaranov/go-openai"
-	"github.com/cenkalti/backoff/v4"
-	"go.uber.org/zap"
 )
 
-type handler func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error 
+type handler func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error
 
 func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
-	err := backoff.Retry(func () error {
+	err := backoff.Retry(func() error {
 		// create file and write to it
-		errorLocation := fileName+":"+strconv.Itoa(entryToDiagnose.LineNo)
-		filename := outputDir+"/"+safeString(errorLocation)+".diagnosing"
+		errorLocation := fileName + ":" + strconv.Itoa(entryToDiagnose.LineNo)
+		filename := outputDir + "/" + safeString(errorLocation) + ".diagnosing"
 		f, err := os.Create(filename)
 		if err != nil {
 			return fmt.Errorf("error creating diagnosis file: %w", err)
@@ -55,7 +55,7 @@ func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model st
 			return fmt.Errorf("error closing the diagnosis file: %w", err)
 		}
 		fullNameNoExt := strings.TrimRight(filename, ".diagnosing")
-		err = os.Rename(filename, fullNameNoExt + ".diagnosed")
+		err = os.Rename(filename, fullNameNoExt+".diagnosed")
 		if err != nil {
 			return fmt.Errorf("error renaming the diagnosis file: %w", err)
 		}

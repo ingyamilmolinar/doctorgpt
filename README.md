@@ -122,10 +122,11 @@ Build from source:
 ## Features (To be enhanced)
 1. Environment independent self-sufficient lightweight (8.3MB) binary. (Windows support is missing but could be easily added)
 2. Configurable chatGPT prompt
-3. Match multiple log formats in a single log file
-4. Match multiple parsers for the same log entry
-5. Powerful regex format (Perl/Go flavor)
-6. Maximize the amount of log context in the diagnosis
+3. Supports every GPT model version
+4. Match multiple log formats in a single log file
+5. Match multiple parsers for the same log entry
+6. Powerful regex format (Perl/Go flavor)
+7. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
 1. Test dividing log contexts per span, thread, routine or procedure
@@ -133,18 +134,17 @@ Build from source:
 3. Support log filtering
 
 ## Future work
-1. Support other GPT versions (GPT3.5)
-2. Structured logging parsing
-3. Production readiness (security, auth, monitoring, optimization, more tests...)
-4. Release strategy & CI
-5. Sentry SDK integration
-6. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
-7. Helm chart?
-8. Windows / Mac support?
-9. Other AI model APIs?
-10. Send diagnosis requests to a server for later consumption (agent/server architecture)?
+1. Structured logging parsing
+2. Production readiness (security, auth, monitoring, optimization, more tests...)
+3. Release strategy & CI
+4. Sentry SDK integration
+5. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
+6. Helm chart?
+7. Windows / Mac support?
+8. Other AI model APIs?
+9. Send diagnosis requests to a server for later consumption (agent/server architecture)?
 
-## Testing (To be enhanced)
+## Testing
 `go test ./...`
 
 ## Contributing
