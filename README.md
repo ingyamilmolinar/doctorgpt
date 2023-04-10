@@ -80,7 +80,7 @@ The table `public.User` does not exist in the current database.
 Mutation: Register
 POST /graphql 200 365.616 ms - 2139
 
-SUGGESTION:
+DIAGNOSIS:
 It seems the error is caused by a missing table in the database. The table `public.User` does not exist in the current database, and this is causing the `PrismaClientKnownRequestError` to be thrown when trying to execute `prisma.user.findFirst()` in the `UserService.checkUserExists()` function.
 
 To resolve this issue, follow these steps:
@@ -123,14 +123,16 @@ Build from source:
 4. Support log filtering
 
 ## Future work
-1. Production readiness (security, auth, monitoring, optimization, more tests...)
-2. Release strategy & CI
-3. Sentry SDK integration
-4. Helm chart?
-5. Windows / Mac support?
-6. Other AI APIs?
-7. Send diagnosis requests to a server for later consumption (agent/server architecture)?
-8. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
+1. Support other GPT versions (GPT3.5)
+2. Production readiness (security, auth, monitoring, optimization, more tests...)
+3. Release strategy & CI
+4. Sentry SDK integration
+5. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
+6. Helm chart?
+7. Windows / Mac support?
+8. Other AI model APIs?
+9. Send diagnosis requests to a server for later consumption (agent/server architecture)?
+
 
 ## Testing (To be enhanced)
 `go test ./...`

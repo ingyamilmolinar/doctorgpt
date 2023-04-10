@@ -45,8 +45,8 @@ func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey string, e
 		if err != nil {
 			return fmt.Errorf("error diagnosing using the openai API: %w", err)
 		}
-		log.Infof("Suggestion: %s", suggestion)
-		_, err = f.WriteString(fmt.Sprintf("SUGGESTION:\n%s\n", suggestion))
+		log.Infof("Diagnosis: %s", suggestion)
+		_, err = f.WriteString(fmt.Sprintf("DIAGNOSIS:\n%s\n", suggestion))
 		if err != nil {
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}

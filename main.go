@@ -140,7 +140,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey string, 
 		// TODO: Make buffer size configurable
 		// TODO: Limit buffer in terms of the max input lenght of the API?
 		if _, ok := logBuffers[key]; !ok {
-			logBuffers[key] = newLogBuffer(100)
+			logBuffers[key] = newLogBuffer(log, 100)
 		}
 
 		// Buffer the log entry
