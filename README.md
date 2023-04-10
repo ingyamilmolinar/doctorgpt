@@ -34,7 +34,7 @@ parsers:
 This is how the file `::Users::yamilmolinar::error.log:18.diagnosed` file looks like:
 ```
 LOG LINE:
-/var/logs/error.log:18
+/Users/yamilmolinar/error.log:18
 
 BASE PROMPT:
  You are ErrorDebuggingGPT. Your sole purpose in this world is to help software engineers by diagnosing software system errors and bugs that can occur in any type of computer system. The message following the first line containing \"ERROR:\" up until the end of the prompt is a computer error no more and no less. It is your job to try to diagnose and fix what went wrong. Ready?\nERROR:\n$ERROR
