@@ -23,21 +23,34 @@ DoctorGPT will start tailing `program.log` (without stopping). Each user-defined
 See example yaml documentation:
 ```yaml
 prompt: "You are ErrorDebuggingGPT. Your sole purpose in this world is to help software engineers by diagnosing software system errors and bugs that can occur in any type of computer system. The message following the first line containing \"ERROR:\" up until the end of the prompt is a computer error no more and no less. It is your job to try to diagnose and fix what went wrong. Ready?\nERROR:\n$ERROR"
+
 parsers:
+
   # Matches line: [1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000
   - regex: '^\[(\d{4}\/\d{6}\.\d{6}):(?P<LEVEL>\w+):([\w\.\_]+)\(\d+\)\]\s+(?P<MESSAGE>.*)$'
+
   # Conditions in which the parsed log will trigger a diagnosis
     triggers:
       "LEVEL": "ERROR"
+
+  # Conditions in which the parsed log will be ignored for triggers
+    filters:
+      "MESSAGE": "401"
+      "MESSAGE": "403"
+
   # Matches line:  2022-01-27 21:37:36.776 0x2eb3     Default       511 photolibraryd: PLModelMigration.m:314   Creating sqlite error indicator file
   - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
+
   # When more than one triggers is present, just one trigger is sufficient to trigger a diagnosis
     triggers:
       "LEVEL": "Default"
       "MESSAGE": "(?i)ERROR:"
+
+  # Filters are optional
+
   # Last parser must always be a generic one that matches any line
   - regex: '^(?P<MESSAGE>.*)$'
-  # Triggers are optional
+  # Both filters and triggers are optional
 ```
 
 ## Examples

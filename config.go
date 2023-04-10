@@ -21,6 +21,7 @@ type config struct {
 type parserConfig struct {
 	Regex    string            `yaml:"regex"`
 	Triggers map[string]string `yaml:"triggers,omitempty"`
+	Filters  map[string]string `yaml:"filters,omitempty"`
 }
 
 type configProvider func(log *zap.SugaredLogger, configFile string) (config, error)

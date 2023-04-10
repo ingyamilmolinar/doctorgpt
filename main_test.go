@@ -12,10 +12,10 @@ import (
 
 var logger, _ = zap.NewDevelopment()
 
-var nodeLogParser, _ = newParser(logger.Sugar(), "^\\[(?P<LEVEL>\\w+)\\]\\s+(?P<MESSAGE>.*)$", map[string]string{
+var nodeLogParser, _ = newParser(logger.Sugar(), "^\\[(?P<LEVEL>\\w+)\\]\\s+(?P<MESSAGE>.*)$", map[string]string{}, map[string]string{
 	"LEVEL": "ERROR",
 })
-var allLineParser, _ = newParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", map[string]string{})
+var allLineParser, _ = newParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", map[string]string{}, map[string]string{})
 
 type expectedEntry struct {
 	logEntry      logEntry
@@ -91,7 +91,13 @@ func TestParsers(t *testing.T) {
 	}
 }
 
-var dropboxParser, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", map[string]string{
+var dropboxParser, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", map[string]string{}, map[string]string{
+	"LEVEL": "ERROR",
+})
+
+var dropboxParserWithFilters, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", map[string]string{
+	"MESSAGE": "Unable", // We will skip the first error lines
+}, map[string]string{
 	"LEVEL": "ERROR",
 })
 
@@ -150,7 +156,76 @@ func TestDropboxLogExample(t *testing.T) {
 	// Send process for a spin.
 	wg.Add(1)
 	go func(t *testing.T) {
-		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 100, 8000, []parser{
+		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
+			dropboxParser,
+		}, handler, 100*time.Millisecond)
+	}(t)
+	// Wait until handler executes
+	wg.Wait()
+}
+
+func TestDropboxLogExampleWithFilters(t *testing.T) {
+	t.Skip()
+	var wg sync.WaitGroup
+	expectedEntry := logEntry{
+		Parser:    &dropboxParser,
+		Filtered:  false,
+		Triggered: true,
+		Text:      "[1217/201832.973606:ERROR:shader_disk_cache.cc(622)] Shader Cache Creation failed: -2",
+		LineNo:    4,
+		Level:     "ERROR",
+		Message:   "Shader Cache Creation failed: -2",
+	}
+	expectedContext := []logEntry{
+		{
+			Parser:    &dropboxParser,
+			Filtered:  false,
+			Triggered: false,
+			Text:      "[1217/070353.692622:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
+			LineNo:    1,
+			Level:     "WARNING",
+			Message:   "Failed to read DnsConfig.",
+		},
+		{
+			Parser:    &dropboxParser,
+			Filtered:  true,
+			Triggered: true,
+			Text:      "[1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000",
+			LineNo:    2,
+			Level:     "ERROR",
+			Message:   "Unable to move cache folder GPUCache to old_GPUCache_000",
+		},
+		{
+			Parser:    &dropboxParser,
+			Filtered:  true,
+			Triggered: true,
+			Text:      "[1217/201832.973523:ERROR:disk_cache.cc(184)] Unable to create cache",
+			LineNo:    3,
+			Level:     "ERROR",
+			Message:   "Unable to create cache",
+		},
+		expectedEntry,
+		{
+			Parser:    &dropboxParser,
+			Filtered:  false,
+			Triggered: false,
+			Text:      "[1217/234231.659591:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
+			LineNo:    5,
+			Level:     "WARNING",
+			Message:   "Failed to read DnsConfig.",
+		},
+	}
+	// create validation function
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+		require.Equal(t, expectedEntry, entryToDiagnose)
+		require.Equal(t, expectedContext, logContext)
+		wg.Done()
+		return nil
+	}
+	// Send process for a spin.
+	wg.Add(1)
+	go func(t *testing.T) {
+		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
 			dropboxParser,
 		}, handler, 100*time.Millisecond)
 	}(t)
