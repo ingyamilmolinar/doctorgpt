@@ -13,11 +13,13 @@ import (
 func main() {
 	// Parse command-line arguments
 	// TODO: Monitor all logs in a directory 
-	debugFlag := flag.Bool("debug", true, "log debug flag")
-	logBundlingTimeoutInSecs := flag.Int("bundlingtimeoutseconds", 5, "log bundling timeout duration in seconds")
 	logFilePath := flag.String("logfile", "", "path to log file")
 	outputDir := flag.String("outdir", "", "path to output directory")
 	configFilePath := flag.String("configfile", "", "path to config file")
+	debugFlag := flag.Bool("debug", true, "log debug flag")
+	logBundlingTimeoutInSecs := flag.Int("bundlingtimeoutseconds", 5, "log bundling timeout duration in seconds")
+	bufferSize := flag.Int("buffersize", 100, "max log entries per ring-buffer")
+	maxTokens := flag.Int("maxtokens", 8000, "max tokens for context per API request")
 	flag.Parse()
 
 	// Init logger
@@ -63,7 +65,7 @@ func main() {
 
 	// This will effectively never end (it doesn't handle EOF)
 	timeoutDuration := time.Duration(*logBundlingTimeoutInSecs) * time.Second
-	monitorLogLoop(log, *logFilePath, *outputDir, apiKey, parsers, handleTrigger, timeoutDuration)
+	monitorLogLoop(log, *logFilePath, *outputDir, apiKey, *bufferSize, *maxTokens, parsers, handleTrigger, timeoutDuration)
 }
 
 func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider configProvider) ([]parser, error) {
@@ -101,7 +103,7 @@ func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider 
 	return parsers, nil
 }
 
-func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey string, parsers []parser, handler handler, timeout time.Duration) {
+func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey string, bufferSize, maxTokens int, parsers []parser, handler handler, timeout time.Duration) {
 	// Set up tail object to read log file
 	tailConfig := tail.Config{
 		Follow:   true,
@@ -138,9 +140,9 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey string, 
 
 		// Create a new buffer if necessary
 		// TODO: Make buffer size configurable
-		// TODO: Limit buffer in terms of the max input lenght of the API?
+		// https://help.openai.com/en/articles/7127966-what-is-the-difference-between-the-gpt-4-models
 		if _, ok := logBuffers[key]; !ok {
-			logBuffers[key] = newLogBuffer(log, 100)
+			logBuffers[key] = newLogBuffer(log, bufferSize, maxTokens-len(basePrompt))
 		}
 
 		// Buffer the log entry

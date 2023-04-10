@@ -35,7 +35,7 @@ func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey string, e
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}
 
-		context := stringifyLogs(logContext)
+		context := stringify(logContext)
 		log.Infof("Context: %s", context)
 		_, err = f.WriteString(fmt.Sprintf("CONTEXT:\n%s\n\n", context))
 		if err != nil {
@@ -73,6 +73,7 @@ func suggestion(key, basePrompt, errorMsg string) (string, error) {
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
+			// TODO: Support other models
 			Model: openai.GPT4,
 			Messages: []openai.ChatCompletionMessage{
 				{
@@ -99,4 +100,12 @@ func safeString(s string) string {
 		result = s[0:200]
 	}
 	return filepath.Clean(result)
+}
+
+func stringify(entries []logEntry) string {
+	var result string
+	for _, entry := range entries {
+		result += entry.Text + "\n"
+	}
+	return result
 }

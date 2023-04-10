@@ -41,14 +41,6 @@ func parseLogEntry(log *zap.SugaredLogger, parsers []parser, line string, lineNu
 		return logEntry{}, 0, fmt.Errorf("No parser found for line (%s)", line)
 }
 
-func stringifyLogs(logs []logEntry) string {
-	result := ""
-	for _, logEntry := range logs {
-		result += fmt.Sprintf("%s", logEntry.Text) + "\n"
-	}
-	return result
-}
-
 // TODO: Support parsing structured logging
 type parser struct {
 	regex string
