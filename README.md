@@ -5,9 +5,18 @@ DoctorGPT brings GPT into production for error diagnosing!
 DoctorGPT is a lightweight self-contained binary that monitors your application logs for problems and diagnoses them.
 
 ## Usage
-`doctorgpt --logfile="program.log" --configfile="config.yaml" --outdir="~/errors"`
+`OPENAI_KEY=$YOUR_KEY doctorgpt --logfile="program.log" --configfile="config.yaml" --outdir="~/errors"`
 
 DoctorGPT will start tailing `program.log` (without stopping). Each user-defined trigger for a user-defined parser log line event will generate a diagnosis file under directory `~/errors`. `config.yaml` file is used at startup to configure the program.
+
+## CLI flags
+`--logfile (string)` log file to tail and monitor
+`--configfile (string)` yaml config file location
+`--outdir (string)` diagnosis files directory (created if it does not exist)
+`--bundlingtimeoutseconds (int)` wait some time for logs to come-in after the triggered line (for multi-line error dumps) (default: 5)
+`--debug (bool)` debug logging (default: true)
+`--buffersize (int)` maximum number of log entries per buffer  (default: 100)
+`--maxtokens (int)` maximum number of tokens allowed in API (default: 8000)
 
 ## Configuration
 See example yaml documentation:
@@ -124,15 +133,15 @@ Build from source:
 
 ## Future work
 1. Support other GPT versions (GPT3.5)
-2. Production readiness (security, auth, monitoring, optimization, more tests...)
-3. Release strategy & CI
-4. Sentry SDK integration
-5. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
-6. Helm chart?
-7. Windows / Mac support?
-8. Other AI model APIs?
-9. Send diagnosis requests to a server for later consumption (agent/server architecture)?
-
+2. Structured logging parsing
+3. Production readiness (security, auth, monitoring, optimization, more tests...)
+4. Release strategy & CI
+5. Sentry SDK integration
+6. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
+7. Helm chart?
+8. Windows / Mac support?
+9. Other AI model APIs?
+10. Send diagnosis requests to a server for later consumption (agent/server architecture)?
 
 ## Testing (To be enhanced)
 `go test ./...`
