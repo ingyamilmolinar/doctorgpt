@@ -6,23 +6,23 @@ import (
 )
 
 type logBuffer struct {
-	size int
+	size      int
 	maxTokens int
-	pointer int
-	capacity int
-	buffer []logEntry
-	logger *zap.SugaredLogger
+	pointer   int
+	capacity  int
+	buffer    []logEntry
+	logger    *zap.SugaredLogger
 }
 
 func newLogBuffer(log *zap.SugaredLogger, size, maxTokens int) *logBuffer {
 	log.Debugf("Initializing ring buffer of size %d and max tokens %d", size, maxTokens)
 	return &logBuffer{
-		size: size,
+		size:      size,
 		maxTokens: maxTokens,
-		pointer: 0,
-		capacity: 0,
-		buffer: make([]logEntry, size, size),
-		logger: log,
+		pointer:   0,
+		capacity:  0,
+		buffer:    make([]logEntry, size, size),
+		logger:    log,
 	}
 }
 
@@ -30,9 +30,9 @@ func (lb *logBuffer) Append(entry logEntry) {
 	// update pointer to oldest entry
 	lb.logger.Debugf("Appending into index: %d", lb.pointer)
 	lb.buffer[lb.pointer] = entry
-	lb.pointer = (lb.pointer+1) % lb.size
+	lb.pointer = (lb.pointer + 1) % lb.size
 	// TODO: Limit capacity?
-	lb.capacity = lb.capacity+1
+	lb.capacity = lb.capacity + 1
 	lb.logger.Debugf("New pointer: %d", lb.pointer)
 	lb.logger.Debugf("New capacity: %d", lb.capacity)
 }
@@ -66,7 +66,7 @@ func trimSlice(log *zap.SugaredLogger, entries []logEntry, maxTokens int) []logE
 	tokens := 0
 	// Go from most recent logs into oldest logs
 	var i int
-	for i = len(entries)-1; i >= 0; i-- {
+	for i = len(entries) - 1; i >= 0; i-- {
 		logEntry := entries[i]
 		tokens += getTokens(logEntry.Text)
 		if tokens > maxTokens {
@@ -82,5 +82,5 @@ func trimSlice(log *zap.SugaredLogger, entries []logEntry, maxTokens int) []logE
 
 // https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
 func getTokens(s string) int {
-	return len(s)/4
+	return len(s) / 4
 }

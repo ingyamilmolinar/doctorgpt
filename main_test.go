@@ -1,13 +1,13 @@
 package main
 
 import (
-	"testing"
-	"time"
-	"sync"
 	"github.com/hpcloud/tail"
-	"go.uber.org/zap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"sync"
+	"testing"
+	"time"
 )
 
 var logger, _ = zap.NewDevelopment()
@@ -18,50 +18,50 @@ var nodeLogParser, _ = newParser(logger.Sugar(), "^\\[(?P<LEVEL>\\w+)\\]\\s+(?P<
 var allLineParser, _ = newParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", map[string]string{})
 
 type expectedEntry struct {
-	logEntry logEntry
+	logEntry      logEntry
 	parserMatched int
 }
 
 var expectedEntries = []expectedEntry{
 	{
 		logEntry: logEntry{
-			Parser: &allLineParser,
+			Parser:    &allLineParser,
 			Triggered: false,
-			LineNo: 1,
-			Text: "yarn run v1.22.19",
-			Message: "yarn run v1.22.19",
+			LineNo:    1,
+			Text:      "yarn run v1.22.19",
+			Message:   "yarn run v1.22.19",
 		},
 		parserMatched: 1,
 	},
 	{
 		logEntry: logEntry{
-			Parser: &allLineParser,
+			Parser:    &allLineParser,
 			Triggered: false,
-			LineNo: 2,
-			Text: "$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts",
-			Message: "$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts",
+			LineNo:    2,
+			Text:      "$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts",
+			Message:   "$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts",
 		},
 		parserMatched: 1,
 	},
 	{
 		logEntry: logEntry{
-			Parser: &nodeLogParser,
+			Parser:    &nodeLogParser,
 			Triggered: false,
-			LineNo: 3,
-			Text: "[INFO] 15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)",
-			Message: "15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)",
-			Level: "INFO",
+			LineNo:    3,
+			Text:      "[INFO] 15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)",
+			Message:   "15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)",
+			Level:     "INFO",
 		},
 		parserMatched: 0,
 	},
 	{
 		logEntry: logEntry{
-			Parser: &nodeLogParser,
+			Parser:    &nodeLogParser,
 			Triggered: true,
-			LineNo: 4,
-			Text: "[ERROR]  PrismaClientKnownRequestError:",
-			Message: "PrismaClientKnownRequestError:",
-			Level: "ERROR",
+			LineNo:    4,
+			Text:      "[ERROR]  PrismaClientKnownRequestError:",
+			Message:   "PrismaClientKnownRequestError:",
+			Level:     "ERROR",
 		},
 		parserMatched: 0,
 	},
@@ -74,7 +74,7 @@ func TestParsers(t *testing.T) {
 	}
 
 	tailConfig := tail.Config{
-		Follow:   false,
+		Follow:    false,
 		MustExist: true,
 	}
 
@@ -98,46 +98,46 @@ var dropboxParser, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6})
 func TestDropboxLogExample(t *testing.T) {
 	var wg sync.WaitGroup
 	expectedEntry := logEntry{
-		Parser: &dropboxParser,
+		Parser:    &dropboxParser,
 		Triggered: true,
-		Text: "[1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000",
-		LineNo: 2,
-		Level: "ERROR",
-		Message: "Unable to move cache folder GPUCache to old_GPUCache_000",
+		Text:      "[1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000",
+		LineNo:    2,
+		Level:     "ERROR",
+		Message:   "Unable to move cache folder GPUCache to old_GPUCache_000",
 	}
 	expectedContext := []logEntry{
 		{
-			Parser: &dropboxParser,
+			Parser:    &dropboxParser,
 			Triggered: false,
-			Text: "[1217/070353.692622:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
-			LineNo: 1,
-			Level: "WARNING",
-			Message: "Failed to read DnsConfig.",
+			Text:      "[1217/070353.692622:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
+			LineNo:    1,
+			Level:     "WARNING",
+			Message:   "Failed to read DnsConfig.",
 		},
 		expectedEntry,
 		{
-			Parser: &dropboxParser,
+			Parser:    &dropboxParser,
 			Triggered: true,
-			Text: "[1217/201832.973523:ERROR:disk_cache.cc(184)] Unable to create cache",
-			LineNo: 3,
-			Level: "ERROR",
-			Message: "Unable to create cache",
+			Text:      "[1217/201832.973523:ERROR:disk_cache.cc(184)] Unable to create cache",
+			LineNo:    3,
+			Level:     "ERROR",
+			Message:   "Unable to create cache",
 		},
 		{
-			Parser: &dropboxParser,
+			Parser:    &dropboxParser,
 			Triggered: true,
-			Text: "[1217/201832.973606:ERROR:shader_disk_cache.cc(622)] Shader Cache Creation failed: -2",
-			LineNo: 4,
-			Level: "ERROR",
-			Message: "Shader Cache Creation failed: -2",
+			Text:      "[1217/201832.973606:ERROR:shader_disk_cache.cc(622)] Shader Cache Creation failed: -2",
+			LineNo:    4,
+			Level:     "ERROR",
+			Message:   "Shader Cache Creation failed: -2",
 		},
 		{
-			Parser: &dropboxParser,
+			Parser:    &dropboxParser,
 			Triggered: false,
-			Text: "[1217/234231.659591:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
-			LineNo: 5,
-			Level: "WARNING",
-			Message: "Failed to read DnsConfig.",
+			Text:      "[1217/234231.659591:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
+			LineNo:    5,
+			Level:     "WARNING",
+			Message:   "Failed to read DnsConfig.",
 		},
 	}
 	// create validation function
@@ -149,21 +149,20 @@ func TestDropboxLogExample(t *testing.T) {
 	}
 	// Send process for a spin.
 	wg.Add(1)
-	go func(t *testing.T){
+	go func(t *testing.T) {
 		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 100, 8000, []parser{
 			dropboxParser,
 		}, handler, 100*time.Millisecond)
-		t.FailNow()
 	}(t)
 	// Wait until handler executes
 	wg.Wait()
 }
 
-func TestBuffer(t *testing.T){
+func TestBuffer(t *testing.T) {
 	// Dump() will only return the latest 30 characters
 	buffer := newLogBuffer(logger.Sugar(), 3, 30/4)
 	entry1 := logEntry{
-		Text: "0123456789", // 10 chars
+		Text:   "0123456789", // 10 chars
 		LineNo: 1,
 	}
 	entries := []logEntry{
@@ -172,21 +171,21 @@ func TestBuffer(t *testing.T){
 	buffer.Append(entry1)
 	require.Equal(t, entries, buffer.Dump())
 	entry2 := logEntry{
-		Text: "abcdefghij", // 10 chars
+		Text:   "abcdefghij", // 10 chars
 		LineNo: 2,
 	}
 	buffer.Append(entry2)
 	entries = append(entries, entry2)
 	require.Equal(t, entries, buffer.Dump())
 	entry3 := logEntry{
-		Text: "klmnopqrst", // 10 chars
+		Text:   "klmnopqrst", // 10 chars
 		LineNo: 3,
 	}
 	buffer.Append(entry3)
 	entries = append(entries, entry3)
 	require.Equal(t, entries, buffer.Dump())
 	entry4 := logEntry{
-		Text: "uvwxyz-./;", // 10 chars
+		Text:   "uvwxyz-./;", // 10 chars
 		LineNo: 4,
 	}
 	buffer.Append(entry4)
@@ -200,7 +199,7 @@ func TestBuffer(t *testing.T){
 	require.Equal(t, expectedBuffer, buffer.buffer)
 	require.Equal(t, entries[1:], buffer.Dump())
 	entry5 := logEntry{
-		Text: "abcdefghijklmnopqrst", // 20 chars
+		Text:   "abcdefghijklmnopqrst", // 20 chars
 		LineNo: 5,
 	}
 	buffer.Append(entry5)
