@@ -158,3 +158,40 @@ func TestDropboxLogExample(t *testing.T) {
 	// Wait until handler executes
 	wg.Wait()
 }
+
+func TestBuffer(t *testing.T){
+	buffer := newLogBuffer(logger.Sugar(), 3)
+	entry1 := logEntry{
+		LineNo: 1,
+	}
+	entries := []logEntry{
+		entry1,
+	}
+	buffer.Append(entry1)
+	require.Equal(t, entries, buffer.Dump())
+	entry2 := logEntry{
+		LineNo: 2,
+	}
+	buffer.Append(entry2)
+	entries = append(entries, entry2)
+	require.Equal(t, entries, buffer.Dump())
+	entry3 := logEntry{
+		LineNo: 3,
+	}
+	buffer.Append(entry3)
+	entries = append(entries, entry3)
+	require.Equal(t, entries, buffer.Dump())
+	entry4 := logEntry{
+		LineNo: 4,
+	}
+	buffer.Append(entry4)
+	// It circled around
+	expectedBuffer := []logEntry{
+		entry4, // <- replaced first entry
+		entry2,
+		entry3,
+	}
+	entries = append(entries, entry4)
+	require.Equal(t, expectedBuffer, buffer.buffer)
+	require.Equal(t, entries[1:], buffer.Dump())
+}
