@@ -136,15 +136,15 @@ Build from source:
 1. Environment independent self-sufficient lightweight (8.3MB) binary. (Windows support is missing but could be easily added)
 2. Configurable chatGPT prompt
 3. Supports every GPT model version
-4. Match multiple log formats in a single log file
+4. Match multiple log formats within the same file
 5. Match multiple parsers for the same log entry
-6. Powerful regex format (Perl/Go flavor)
-7. Maximize the amount of log context in the diagnosis
+6. Match multiple filters for the same log entry
+7. Powerful regex format (Perl/Go flavor)
+8. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
 1. Test dividing log contexts per span, thread, routine or procedure
 2. Lightweight docker image
-3. Support log filtering
 
 ## Future work
 1. Structured logging parsing
