@@ -124,6 +124,9 @@ If you still encounter issues, double-check your Prisma configuration, as well a
 ```
 
 ## Installation
+Using `go install`
+1. `go install "github.com/ingyamilmolinar/doctorgpt"`
+
 Build from source:
 1. `go build -o doctorgpt`
 2. Copy the `doctorgpt` binary anywhere under your $PATH (optional)
