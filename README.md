@@ -140,14 +140,15 @@ Build from source:
 2. Configurable chatGPT prompt
 3. Supports every GPT model version
 4. Match multiple log formats within the same file
-5. Match multiple parsers for the same log entry
-6. Match multiple filters for the same log entry
+5. Match multiple parsers for the same log entry (with different variable only)
+6. Match multiple filters for the same log entry (with different variable only)
 7. Powerful regex format (Perl/Go flavor)
 8. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
 1. Test dividing log contexts per span, thread, routine or procedure
 2. Lightweight docker image
+3. Support multiple patterns for the same regex variable name
 
 ## Future work
 1. Structured logging parsing

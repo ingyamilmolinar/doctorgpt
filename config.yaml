@@ -5,7 +5,6 @@ parsers:
       "LEVEL": "ERROR"
     filters:
       "MESSAGE": "401"
-      "MESSAGE": "403"
   - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
     triggers:
       "LEVEL": "Default"
