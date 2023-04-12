@@ -289,3 +289,8 @@ func TestBuffer(t *testing.T) {
 	// Dump should skip entry3 since entry4 + entry5 == 30 chars
 	require.Equal(t, entries[3:], buffer.Dump())
 }
+
+// TODO:
+func TestMultipleBufferSupport(t *testing.T) {
+
+}

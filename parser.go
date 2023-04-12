@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 	"regexp"
 	"time"
+	"strconv"
 )
 
 // Struct representing a single log entry (message can be a multi-line string)
@@ -13,13 +14,16 @@ type logEntry struct {
 	Parser    *parser
 	Triggered bool
 	Filtered  bool
-	Text      string    `structs:"TEXT"`
+	Text      string
 	LineNo    int       `structs:"LINENO"`
-	Date      time.Time `structs:"DATE"`
-	Time      time.Time `structs:"TIME"`
+	// TODO: Support date and time
+	Date      time.Time
+	Time      time.Time
+	Filename  string    `structs:"FILENAME"`
 	Level     string    `structs:"LEVEL"`
 	Thread    string    `structs:"THREAD"`
 	Routine   string    `structs:"ROUTINE"`
+	Process   string    `structs:"PROCESS"`
 	Trace     string    `structs:"TRACE"`
 	Message   string    `structs:"MESSAGE"`
 }
@@ -32,6 +36,9 @@ func parseLogEntry(log *zap.SugaredLogger, parsers []parser, line string, lineNu
 		entry, err = parser.Parse(log, line, lineNum)
 		if err == nil {
 			log.Debugf("Matched: i (%d): Regex (%s), Line (%s)", i, parser.regex, line)
+			if entry.Filtered {
+				log.Debugf("Filtered: i (%d): Filters (%v), Line (%s)", i, parser.filters, line)
+			}
 			if entry.Triggered {
 				log.Debugf("Triggered: i (%d): Triggers (%v), Line (%s)", i, parser.triggers, line)
 			}
@@ -97,7 +104,7 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 	}
 	_, ok := result["MESSAGE"]
 	if !ok {
-		return logEntry{}, fmt.Errorf("parser with regex (%s) did not match line (%s)", p.regex, line)
+			log.Infof("Could not match MESSAGE in line (%s)", line)
 	}
 	entry := logEntry{
 		Parser:  &p,
@@ -105,10 +112,44 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 		LineNo:  lineNum,
 		Message: result["MESSAGE"],
 	}
-	// TODO: Include the rest of the fields
+
+	lineNoStr, ok := result["LINENO"]
+	if ok {
+		lineNo, err := strconv.Atoi(lineNoStr)
+		if err != nil {
+			log.Infof("Could not cast into int (%s) in line (%s)", lineNoStr, line)
+		}
+		entry.LineNo = lineNo
+	}
+
+	_, ok = result["FILENAME"]
+	if ok {
+		entry.Trace = result["FILENAME"]
+	}
+
 	_, ok = result["LEVEL"]
 	if ok {
 		entry.Level = result["LEVEL"]
+	}
+
+	_, ok = result["THREAD"]
+	if ok {
+		entry.Thread = result["THREAD"]
+	}
+
+	_, ok = result["ROUTINE"]
+	if ok {
+		entry.Routine = result["ROUTINE"]
+	}
+
+	_, ok = result["PROCESS"]
+	if ok {
+		entry.Routine = result["PROCESS"]
+	}
+
+	_, ok = result["TRACE"]
+	if ok {
+		entry.Trace = result["TRACE"]
 	}
 
 	// Set Filtered

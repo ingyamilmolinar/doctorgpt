@@ -35,8 +35,7 @@ parsers:
 
   # Conditions in which the parsed log will be ignored for triggers
     filters:
-      "MESSAGE": "401"
-      "MESSAGE": "403"
+      "MESSAGE": "HTTP 401"
 
   # Matches line:  2022-01-27 21:37:36.776 0x2eb3     Default       511 photolibraryd: PLModelMigration.m:314   Creating sqlite error indicator file
   - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
@@ -52,6 +51,18 @@ parsers:
   - regex: '^(?P<MESSAGE>.*)$'
   # Both filters and triggers are optional
 ```
+
+## Supported log variables for filters/triggers
+- `LINENO`: Log line number
+- `FILENAME`: File name or file path
+- `LEVEL`: Log level
+- `THREAD`: Thread name or thread ID
+- `ROUTINE`: Routine name or routine ID
+- `PROCESS`: Process name or process ID
+- `TRACE`: Trace name or trace ID
+- `MESSAGE`: Log message (must be included in the parser)
+
+`NOTE: Support for custom variables is coming`
 
 ## Examples
 This is how the file `::Users::yamilmolinar::error.log:18.diagnosed` file looks like:
@@ -124,7 +135,7 @@ If you still encounter issues, double-check your Prisma configuration, as well a
 ```
 
 ## Installation
-Using `go install`
+Using `go install:
 1. `go install "github.com/ingyamilmolinar/doctorgpt"`
 
 Build from source:
@@ -146,20 +157,23 @@ Build from source:
 8. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
-1. Test dividing log contexts per span, thread, routine or procedure
+1. Dividing log contexts per custom regex match in variable values
 2. Lightweight docker image
 3. Support multiple patterns for the same regex variable name
+4. Filter logs from the context (for sensitive or spammy information)
 
 ## Future work
-1. Structured logging parsing
-2. Production readiness (security, auth, monitoring, optimization, more tests...)
-3. Release strategy & CI
-4. Sentry SDK integration
-5. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
-6. Helm chart?
-7. Windows / Mac support?
-8. Other AI model APIs?
-9. Send diagnosis requests to a server for later consumption (agent/server architecture)?
+1. Support custom variable names
+2. Structured logging parsing
+3. Production readiness (security, auth, monitoring, optimization, more tests...)
+4. Release strategy & CI
+5. Support custom types (for non-regex matching)
+6. Sentry SDK integration
+7. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
+8. Helm chart?
+9. Windows / Mac support?
+10. Other AI model APIs?
+11. Send diagnosis requests to a server for later consumption (agent/server architecture)?
 
 ## Testing
 `go test ./...`
