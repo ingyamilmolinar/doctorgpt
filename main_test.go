@@ -29,7 +29,9 @@ var expectedEntries = []expectedEntry{
 			Triggered: false,
 			LineNo:    1,
 			Text:      "yarn run v1.22.19",
-			Message:   "yarn run v1.22.19",
+			Variables: map[string]string{
+				"MESSAGE": "yarn run v1.22.19",
+			},
 		},
 		parserMatched: 1,
 	},
@@ -39,7 +41,9 @@ var expectedEntries = []expectedEntry{
 			Triggered: false,
 			LineNo:    2,
 			Text:      "$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts",
-			Message:   "$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts",
+			Variables: map[string]string{
+				"MESSAGE": "$ tsnd --respawn --transpile-only --no-notify --ignore-watch node_modules src/index.ts",
+			},
 		},
 		parserMatched: 1,
 	},
@@ -49,8 +53,10 @@ var expectedEntries = []expectedEntry{
 			Triggered: false,
 			LineNo:    3,
 			Text:      "[INFO] 15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)",
-			Message:   "15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)",
-			Level:     "INFO",
+			Variables: map[string]string{
+				"LEVEL":   "INFO",
+				"MESSAGE": "15:20:25 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.8.0, typescript ver. 4.8.4)",
+			},
 		},
 		parserMatched: 0,
 	},
@@ -60,8 +66,10 @@ var expectedEntries = []expectedEntry{
 			Triggered: true,
 			LineNo:    4,
 			Text:      "[ERROR]  PrismaClientKnownRequestError:",
-			Message:   "PrismaClientKnownRequestError:",
-			Level:     "ERROR",
+			Variables: map[string]string{
+				"LEVEL":   "ERROR",
+				"MESSAGE": "PrismaClientKnownRequestError:",
+			},
 		},
 		parserMatched: 0,
 	},
@@ -108,8 +116,10 @@ func TestDropboxLogExample(t *testing.T) {
 		Triggered: true,
 		Text:      "[1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000",
 		LineNo:    2,
-		Level:     "ERROR",
-		Message:   "Unable to move cache folder GPUCache to old_GPUCache_000",
+		Variables: map[string]string{
+			"LEVEL":   "ERROR",
+			"MESSAGE": "Unable to move cache folder GPUCache to old_GPUCache_000",
+		},
 	}
 	expectedContext := []logEntry{
 		{
@@ -117,8 +127,10 @@ func TestDropboxLogExample(t *testing.T) {
 			Triggered: false,
 			Text:      "[1217/070353.692622:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
 			LineNo:    1,
-			Level:     "WARNING",
-			Message:   "Failed to read DnsConfig.",
+			Variables: map[string]string{
+				"LEVEL":   "WARNING",
+				"MESSAGE": "Failed to read DnsConfig.",
+			},
 		},
 		expectedEntry,
 		{
@@ -126,24 +138,30 @@ func TestDropboxLogExample(t *testing.T) {
 			Triggered: true,
 			Text:      "[1217/201832.973523:ERROR:disk_cache.cc(184)] Unable to create cache",
 			LineNo:    3,
-			Level:     "ERROR",
-			Message:   "Unable to create cache",
+			Variables: map[string]string{
+				"LEVEL":   "ERROR",
+				"MESSAGE": "Unable to create cache",
+			},
 		},
 		{
 			Parser:    &dropboxParser,
 			Triggered: true,
 			Text:      "[1217/201832.973606:ERROR:shader_disk_cache.cc(622)] Shader Cache Creation failed: -2",
 			LineNo:    4,
-			Level:     "ERROR",
-			Message:   "Shader Cache Creation failed: -2",
+			Variables: map[string]string{
+				"LEVEL":   "ERROR",
+				"MESSAGE": "Shader Cache Creation failed: -2",
+			},
 		},
 		{
 			Parser:    &dropboxParser,
 			Triggered: false,
 			Text:      "[1217/234231.659591:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
 			LineNo:    5,
-			Level:     "WARNING",
-			Message:   "Failed to read DnsConfig.",
+			Variables: map[string]string{
+				"LEVEL":   "WARNING",
+				"MESSAGE": "Failed to read DnsConfig.",
+			},
 		},
 	}
 	// create validation function
@@ -165,54 +183,63 @@ func TestDropboxLogExample(t *testing.T) {
 }
 
 func TestDropboxLogExampleWithFilters(t *testing.T) {
-	t.Skip()
 	var wg sync.WaitGroup
 	expectedEntry := logEntry{
-		Parser:    &dropboxParser,
+		Parser:    &dropboxParserWithFilters,
 		Filtered:  false,
 		Triggered: true,
 		Text:      "[1217/201832.973606:ERROR:shader_disk_cache.cc(622)] Shader Cache Creation failed: -2",
 		LineNo:    4,
-		Level:     "ERROR",
-		Message:   "Shader Cache Creation failed: -2",
+		Variables: map[string]string{
+			"LEVEL":   "ERROR",
+			"MESSAGE": "Shader Cache Creation failed: -2",
+		},
 	}
 	expectedContext := []logEntry{
 		{
-			Parser:    &dropboxParser,
+			Parser:    &dropboxParserWithFilters,
 			Filtered:  false,
 			Triggered: false,
 			Text:      "[1217/070353.692622:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
 			LineNo:    1,
-			Level:     "WARNING",
-			Message:   "Failed to read DnsConfig.",
+			Variables: map[string]string{
+				"LEVEL":   "WARNING",
+				"MESSAGE": "Failed to read DnsConfig.",
+			},
 		},
 		{
-			Parser:    &dropboxParser,
+			Parser:    &dropboxParserWithFilters,
 			Filtered:  true,
 			Triggered: true,
 			Text:      "[1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000",
 			LineNo:    2,
-			Level:     "ERROR",
-			Message:   "Unable to move cache folder GPUCache to old_GPUCache_000",
+			Variables: map[string]string{
+				"LEVEL":   "ERROR",
+				"MESSAGE": "Unable to move cache folder GPUCache to old_GPUCache_000",
+			},
 		},
 		{
-			Parser:    &dropboxParser,
+			Parser:    &dropboxParserWithFilters,
 			Filtered:  true,
 			Triggered: true,
 			Text:      "[1217/201832.973523:ERROR:disk_cache.cc(184)] Unable to create cache",
 			LineNo:    3,
-			Level:     "ERROR",
-			Message:   "Unable to create cache",
+			Variables: map[string]string{
+				"LEVEL":   "ERROR",
+				"MESSAGE": "Unable to create cache",
+			},
 		},
 		expectedEntry,
 		{
-			Parser:    &dropboxParser,
+			Parser:    &dropboxParserWithFilters,
 			Filtered:  false,
 			Triggered: false,
 			Text:      "[1217/234231.659591:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
 			LineNo:    5,
-			Level:     "WARNING",
-			Message:   "Failed to read DnsConfig.",
+			Variables: map[string]string{
+				"LEVEL":   "WARNING",
+				"MESSAGE": "Failed to read DnsConfig.",
+			},
 		},
 	}
 	// create validation function
@@ -226,7 +253,7 @@ func TestDropboxLogExampleWithFilters(t *testing.T) {
 	wg.Add(1)
 	go func(t *testing.T) {
 		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
-			dropboxParser,
+			dropboxParserWithFilters,
 		}, handler, 100*time.Millisecond)
 	}(t)
 	// Wait until handler executes
@@ -288,9 +315,4 @@ func TestBuffer(t *testing.T) {
 	require.Equal(t, expectedBuffer, buffer.buffer)
 	// Dump should skip entry3 since entry4 + entry5 == 30 chars
 	require.Equal(t, entries[3:], buffer.Dump())
-}
-
-// TODO:
-func TestMultipleBufferSupport(t *testing.T) {
-
 }

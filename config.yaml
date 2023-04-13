@@ -4,7 +4,7 @@ parsers:
     triggers:
       "LEVEL": "ERROR"
     filters:
-      "MESSAGE": "401"
+      "MESSAGE": "HTTP 401"
   - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
     triggers:
       "LEVEL": "Default"
