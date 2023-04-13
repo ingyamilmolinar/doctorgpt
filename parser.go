@@ -2,11 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/fatih/structs"
 	"go.uber.org/zap"
 	"regexp"
-	"time"
-	"strconv"
 )
 
 // Struct representing a single log entry (message can be a multi-line string)
@@ -15,17 +12,10 @@ type logEntry struct {
 	Triggered bool
 	Filtered  bool
 	Text      string
-	LineNo    int       `structs:"LINENO"`
+	LineNo    int
 	// TODO: Support date and time
-	Date      time.Time
-	Time      time.Time
-	Filename  string    `structs:"FILENAME"`
-	Level     string    `structs:"LEVEL"`
-	Thread    string    `structs:"THREAD"`
-	Routine   string    `structs:"ROUTINE"`
-	Process   string    `structs:"PROCESS"`
-	Trace     string    `structs:"TRACE"`
-	Message   string    `structs:"MESSAGE"`
+	// TODO: Support matching on other types
+	Variables map[string]string
 }
 
 // Parse a log line into a LogEntry object
@@ -51,41 +41,69 @@ func parseLogEntry(log *zap.SugaredLogger, parsers []parser, line string, lineNu
 
 // TODO: Support parsing structured logging
 type parser struct {
-	regex    string
-	re       regexp.Regexp
-	triggers []trigger
-	filters  []filter
+	regex     string
+	re        regexp.Regexp
+	variables []string
+	triggers  []trigger
+	filters   []filter
 }
 
 func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex map[string]string) (parser, error) {
+	// TODO: Get variables and save them to map
 	re, err := regexp.Compile(regex)
 	if err != nil {
 		return parser{}, err
 	}
+
+	var variables []string
+	variableSet := map[string]bool{}
+	for i, variable := range re.SubexpNames() {
+		if i == 0 || variable == "" {
+			continue
+		}
+		log.Debugf("Appending variable: (%s)", variable)
+		variables = append(variables, variable)
+		variableSet[variable] = true
+	}
+
 	var filters []filter
 	for k, v := range filtersRegex {
+		// check if variable is part of variable list
+		_, ok := variableSet[k]
+		if !ok {
+			return parser{}, fmt.Errorf("variable (%s) in filter is not a regex variable", k)
+		}
 		filter, err := newFilter(k, v)
 		if err != nil {
 			return parser{}, err
 		}
 		filters = append(filters, filter)
 	}
+
 	var triggers []trigger
 	for k, v := range triggersRegex {
+		// check if variable is part of variable list
+		_, ok := variableSet[k]
+		if !ok {
+			return parser{}, fmt.Errorf("variable (%s) in trigger is not a regex variable", k)
+		}
 		trigger, err := newTrigger(k, v)
 		if err != nil {
 			return parser{}, err
 		}
 		triggers = append(triggers, trigger)
 	}
+
 	log.Debugf("New parser: (%s)", regex)
+	log.Debugf("Variables: (%v)", variables)
 	log.Debugf("Filters: (%v)", filters)
 	log.Debugf("Triggers: (%v)", triggers)
 	return parser{
-		regex:    regex,
-		re:       *re,
-		filters:  filters,
-		triggers: triggers,
+		regex:     regex,
+		re:        *re,
+		variables: variables,
+		filters:   filters,
+		triggers:  triggers,
 	}, nil
 }
 
@@ -95,61 +113,21 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 		log.Debugf("Parser (%s) did not match line (%s)", p.regex, line)
 		return logEntry{}, fmt.Errorf("parser with regex (%s) did not match line (%s)", p.regex, line)
 	}
+
 	result := make(map[string]string)
-	for i, name := range p.re.SubexpNames() {
-		if i != 0 && name != "" {
-			result[name] = matches[i]
-			log.Debugf("Name: (%s), Match: (%s)", name, matches[i])
+	for i, variable := range p.re.SubexpNames() {
+		if i == 0 || variable == "" {
+			continue
 		}
+		result[variable] = matches[i]
+		log.Debugf("Variable: (%s), Match: (%s)", variable, matches[i])
 	}
-	_, ok := result["MESSAGE"]
-	if !ok {
-			log.Infof("Could not match MESSAGE in line (%s)", line)
-	}
+
 	entry := logEntry{
-		Parser:  &p,
-		Text:    line,
-		LineNo:  lineNum,
-		Message: result["MESSAGE"],
-	}
-
-	lineNoStr, ok := result["LINENO"]
-	if ok {
-		lineNo, err := strconv.Atoi(lineNoStr)
-		if err != nil {
-			log.Infof("Could not cast into int (%s) in line (%s)", lineNoStr, line)
-		}
-		entry.LineNo = lineNo
-	}
-
-	_, ok = result["FILENAME"]
-	if ok {
-		entry.Trace = result["FILENAME"]
-	}
-
-	_, ok = result["LEVEL"]
-	if ok {
-		entry.Level = result["LEVEL"]
-	}
-
-	_, ok = result["THREAD"]
-	if ok {
-		entry.Thread = result["THREAD"]
-	}
-
-	_, ok = result["ROUTINE"]
-	if ok {
-		entry.Routine = result["ROUTINE"]
-	}
-
-	_, ok = result["PROCESS"]
-	if ok {
-		entry.Routine = result["PROCESS"]
-	}
-
-	_, ok = result["TRACE"]
-	if ok {
-		entry.Trace = result["TRACE"]
+		Parser:    &p,
+		Text:      line,
+		LineNo:    lineNum,
+		Variables: result,
 	}
 
 	// Set Filtered
@@ -213,38 +191,25 @@ func newTrigger(variable, regex string) (trigger, error) {
 // TODO: Deduplicate this
 func (f filter) Match(log *zap.SugaredLogger, entry logEntry) bool {
 	// Decode entry into json field map
-	m := structs.Map(entry)
-	log.Debugf("Variable (%s) map (%v)", f.variable, m)
-	value, ok := m[f.variable]
+	log.Debugf("Variable (%s) map (%v)", f.variable, entry.Variables)
+	value, ok := entry.Variables[f.variable]
 	if !ok {
 		log.Debugf("Variable not found in entry (%s)", entry.Text)
-		return false
-	}
-	// TODO: Support matching on other types
-	castedValue, ok := value.(string)
-	if !ok {
-		log.Debugf("Could not cast to string (%v)", value)
 		return false
 	}
 	log.Debugf("Trying to match regex (%v)", f.re)
-	return f.re.MatchString(castedValue)
+	return f.re.MatchString(value)
 }
 
+// TODO: Deduplicate this
 func (t trigger) Match(log *zap.SugaredLogger, entry logEntry) bool {
 	// Decode entry into json field map
-	m := structs.Map(entry)
-	log.Debugf("Variable (%s) map (%v)", t.variable, m)
-	value, ok := m[t.variable]
+	log.Debugf("Variable (%s) map (%v)", t.variable, entry.Variables)
+	value, ok := entry.Variables[t.variable]
 	if !ok {
 		log.Debugf("Variable not found in entry (%s)", entry.Text)
 		return false
 	}
-	// TODO: Support matching on other types
-	castedValue, ok := value.(string)
-	if !ok {
-		log.Debugf("Could not cast to string (%v)", value)
-		return false
-	}
 	log.Debugf("Trying to match regex (%v)", t.re)
-	return t.re.MatchString(castedValue)
+	return t.re.MatchString(value)
 }

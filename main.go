@@ -128,17 +128,8 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 		if err != nil {
 			log.Fatalf("Error parsing log entry (%s)", line)
 		}
-		// Divide into buffers depending on granularity
+		// TODO: Divide into buffers depending on granularity
 		key := "DEFAULT"
-		if entry.Thread != "" {
-			key = entry.Thread
-		} else if entry.Routine != "" {
-			key = entry.Routine
-		} else if entry.Process != "" {
-			key = entry.Process
-		} else if entry.Trace != "" {
-			key = entry.Trace
-		}
 		log.Debugf("Process key (%s)", key)
 
 		// Create a new buffer if necessary

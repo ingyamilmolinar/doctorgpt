@@ -52,18 +52,6 @@ parsers:
   # Both filters and triggers are optional
 ```
 
-## Supported log variables for filters/triggers
-- `LINENO`: Log line number
-- `FILENAME`: File name or file path
-- `LEVEL`: Log level
-- `THREAD`: Thread name or thread ID
-- `ROUTINE`: Routine name or routine ID
-- `PROCESS`: Process name or process ID
-- `TRACE`: Trace name or trace ID
-- `MESSAGE`: Log message (must be included in the parser)
-
-`NOTE: Support for custom variables is coming`
-
 ## Examples
 This is how the file `::Users::yamilmolinar::error.log:18.diagnosed` file looks like:
 ```
@@ -153,8 +141,9 @@ Build from source:
 4. Match multiple log formats within the same file
 5. Match multiple parsers for the same log entry (with different variable only)
 6. Match multiple filters for the same log entry (with different variable only)
-7. Powerful regex format (Perl/Go flavor)
-8. Maximize the amount of log context in the diagnosis
+7. Support custom variable names
+8. Powerful regex format (Perl/Go flavor)
+9. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
 1. Dividing log contexts per custom regex match in variable values
@@ -163,19 +152,18 @@ Build from source:
 4. Filter logs from the context (for sensitive or spammy information)
 
 ## Future work
-1. Support custom variable names
-2. Structured logging parsing
-3. Production readiness (security, auth, monitoring, optimization, more tests...)
-4. Release strategy & CI
-5. Support custom types (for non-regex matching)
-6. Sentry SDK integration
-7. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
-8. Helm chart?
-9. Windows / Mac support?
-10. Other AI model APIs?
-11. Send diagnosis requests to a server for later consumption (agent/server architecture)?
+1. Structured logging parsing
+2. Production readiness (security, auth, monitoring, optimization, more tests...)
+3. Release strategy & CI
+4. Support custom types (for non-regex matching)
+5. Sentry SDK integration
+6. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
+7. Helm chart?
+8. Windows / Mac support?
+9. Other AI model APIs?
+10. Send diagnosis requests to a server for later consumption (agent/server architecture)?
 
-## Testing
+## Testing (Tests do not use OpenAI API)
 `go test ./...`
 
 ## Contributing
