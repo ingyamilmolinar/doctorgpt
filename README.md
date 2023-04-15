@@ -136,32 +136,33 @@ Build from source:
 
 ## Features (To be enhanced)
 1. Environment independent self-sufficient lightweight (8.3MB) binary. (Windows support is missing but could be easily added)
-2. Configurable chatGPT prompt
-3. Supports every GPT model version
-4. Match multiple log formats within the same file
-5. Match multiple parsers for the same log entry (with different variable only)
-6. Match multiple filters for the same log entry (with different variable only)
-7. Support custom variable names
-8. Powerful regex format (Perl/Go flavor)
-9. Maximize the amount of log context in the diagnosis
+2. Alpine Linux Docker image
+3. Configurable chatGPT prompt
+4. Supports every GPT model version
+5. Match multiple log formats within the same file
+6. Match multiple parsers for the same log entry (with different variable only)
+7. Match multiple filters for the same log entry (with different variable only)
+8. Support custom variable names
+9. Powerful regex format (Perl/Go flavor)
+10. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
 1. Dividing log contexts per custom regex match in variable values
-2. Lightweight docker image
-3. Support multiple patterns for the same regex variable name
-4. Filter logs from the context (for sensitive or spammy information)
+2. Support multiple patterns for the same regex variable name
+3. Filter logs from the context (for sensitive or spammy information)
 
 ## Future work
 1. Structured logging parsing
-2. Production readiness (security, auth, monitoring, optimization, more tests...)
-3. Release strategy & CI
+2. Release strategy & CI
+3. Production readiness (security, auth, monitoring, optimization, more tests...)
 4. Support custom types (for non-regex matching)
 5. Sentry SDK integration
 6. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
-7. Helm chart?
-8. Windows / Mac support?
-9. Other AI model APIs?
-10. Send diagnosis requests to a server for later consumption (agent/server architecture)?
+7. "From SCRATCH" lightweight docker image
+8. Helm chart?
+9. Windows / Mac support?
+10. Other AI model APIs?
+11. Send diagnosis requests to a server for later consumption (agent/server architecture)?
 
 ## Testing (Tests do not use OpenAI API)
 `go test ./...`
