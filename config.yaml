@@ -2,14 +2,22 @@ prompt: "You are ErrorDebuggingGPT. Your sole purpose in this world is to help s
 parsers:
   - regex: '^\[(\d{4}\/\d{6}\.\d{6}):(?P<LEVEL>\w+):([\w\.\_]+)\(\d+\)\]\s+(?P<MESSAGE>.*)$'
     triggers:
-      "LEVEL": "ERROR"
+      - variable: "LEVEL"
+        regex:    "ERROR"
     filters:
-      "MESSAGE": "HTTP 401"
+      - variable: "MESSAGE"
+        regex:    "HTTP 401"
+
   - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
     triggers:
-      "LEVEL": "Default"
-      "MESSAGE": "(?i)ERROR:"
+      - variable: "LEVEL"
+        regex:    "Default"
+      - variable: "MESSAGE"
+        regex:    "(?i)ERROR:"
+
   - regex: '^\[(?P<LEVEL>\w+)\]\s+(?P<MESSAGE>.*)$'
     triggers:
-      "LEVEL": "ERROR"
+      - variable: "LEVEL"
+        regex:    "ERROR"
+
   - regex: '^(?P<MESSAGE>.*)$'

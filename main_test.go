@@ -12,10 +12,14 @@ import (
 
 var logger, _ = zap.NewDevelopment()
 
-var nodeLogParser, _ = newParser(logger.Sugar(), "^\\[(?P<LEVEL>\\w+)\\]\\s+(?P<MESSAGE>.*)$", map[string]string{}, map[string]string{
-	"LEVEL": "ERROR",
+var nodeLogParser, _ = newParser(logger.Sugar(), "^\\[(?P<LEVEL>\\w+)\\]\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+	{
+		Variable: "LEVEL",
+		Regex:    "ERROR",
+	},
 })
-var allLineParser, _ = newParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", map[string]string{}, map[string]string{})
+
+var allLineParser, _ = newParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{})
 
 type expectedEntry struct {
 	logEntry      logEntry
@@ -99,14 +103,11 @@ func TestParsers(t *testing.T) {
 	}
 }
 
-var dropboxParser, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", map[string]string{}, map[string]string{
-	"LEVEL": "ERROR",
-})
-
-var dropboxParserWithFilters, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", map[string]string{
-	"MESSAGE": "Unable", // We will skip the first error lines
-}, map[string]string{
-	"LEVEL": "ERROR",
+var dropboxParser, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+	{
+		Variable: "LEVEL",
+		Regex:    "ERROR",
+	},
 })
 
 func TestDropboxLogExample(t *testing.T) {
@@ -153,16 +154,6 @@ func TestDropboxLogExample(t *testing.T) {
 				"MESSAGE": "Shader Cache Creation failed: -2",
 			},
 		},
-		{
-			Parser:    &dropboxParser,
-			Triggered: false,
-			Text:      "[1217/234231.659591:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
-			LineNo:    5,
-			Variables: map[string]string{
-				"LEVEL":   "WARNING",
-				"MESSAGE": "Failed to read DnsConfig.",
-			},
-		},
 	}
 	// create validation function
 	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
@@ -176,11 +167,25 @@ func TestDropboxLogExample(t *testing.T) {
 	go func(t *testing.T) {
 		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
 			dropboxParser,
+			allLineParser,
 		}, handler, 100*time.Millisecond)
 	}(t)
 	// Wait until handler executes
 	wg.Wait()
 }
+
+var dropboxParserWithFilters, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []variableMatcher{
+	{
+		// We will skip the first error lines
+		Variable: "MESSAGE",
+		Regex:    "Unable",
+	},
+}, []variableMatcher{
+	{
+		Variable: "LEVEL",
+		Regex:    "ERROR",
+	},
+})
 
 func TestDropboxLogExampleWithFilters(t *testing.T) {
 	var wg sync.WaitGroup
@@ -230,17 +235,6 @@ func TestDropboxLogExampleWithFilters(t *testing.T) {
 			},
 		},
 		expectedEntry,
-		{
-			Parser:    &dropboxParserWithFilters,
-			Filtered:  false,
-			Triggered: false,
-			Text:      "[1217/234231.659591:WARNING:dns_config_service_posix.cc(335)] Failed to read DnsConfig.",
-			LineNo:    5,
-			Variables: map[string]string{
-				"LEVEL":   "WARNING",
-				"MESSAGE": "Failed to read DnsConfig.",
-			},
-		},
 	}
 	// create validation function
 	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
@@ -254,6 +248,75 @@ func TestDropboxLogExampleWithFilters(t *testing.T) {
 	go func(t *testing.T) {
 		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
 			dropboxParserWithFilters,
+			allLineParser,
+		}, handler, 100*time.Millisecond)
+	}(t)
+	// Wait until handler executes
+	wg.Wait()
+}
+
+// We do not match the hash in a variable on purpose
+var photosParser, _ = newParser(logger.Sugar(), "^(?P<DATE>[^ ]+)\\s+(?P<TIME>[^ ]+)\\s+[^ ]+\\s+(?P<LEVEL>[^ ]+)\\s+(?P<PID>[^ ]+)\\s+(?P<PROCNAME>[^ ]+)\\s+(?P<FILEANDLINENO>[^ ]+)\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+	{
+		Variable: "MESSAGE",
+		Regex:    "error", // will match line 2
+	},
+	{
+		Variable: "MESSAGE",
+		Regex:    "Error:", // will  match lines 4-5
+	},
+})
+
+func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
+	var wg sync.WaitGroup
+	expectedEntry := logEntry{
+		Parser:    &photosParser,
+		Filtered:  false,
+		Triggered: true,
+		Text:      "2022-01-27 21:37:36.776 0x2eb3     Default       511 photolibraryd: PLModelMigration.m:314   Creating sqlite error indicator file",
+		LineNo:    2,
+		Variables: map[string]string{
+			"DATE":          "2022-01-27",
+			"TIME":          "21:37:36.776",
+			"LEVEL":         "Default",
+			"PID":           "511",
+			"PROCNAME":      "photolibraryd:",
+			"FILEANDLINENO": "PLModelMigration.m:314",
+			"MESSAGE":       "Creating sqlite error indicator file",
+		},
+	}
+	expectedContext := []logEntry{
+		{
+			Parser:    &photosParser,
+			Filtered:  false,
+			Triggered: false,
+			Text:      "2022-01-27 21:37:36.774 0x2eb3     Info          511 photolibraryd: PLModelMigration.m:290   Store has incompatible model version 14300, will attempt migration to current version 15331.",
+			LineNo:    1,
+			Variables: map[string]string{
+				"DATE":          "2022-01-27",
+				"TIME":          "21:37:36.774",
+				"LEVEL":         "Info",
+				"PID":           "511",
+				"PROCNAME":      "photolibraryd:",
+				"FILEANDLINENO": "PLModelMigration.m:290",
+				"MESSAGE":       "Store has incompatible model version 14300, will attempt migration to current version 15331.",
+			},
+		},
+		expectedEntry,
+	}
+	// create validation function
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+		require.Equal(t, expectedEntry, entryToDiagnose)
+		require.Equal(t, expectedContext, logContext)
+		wg.Done()
+		return nil
+	}
+	// Send process for a spin.
+	wg.Add(1)
+	go func(t *testing.T) {
+		monitorLogLoop(logger.Sugar(), "testlogs/photos.log", "", "", "", 10, 8000, []parser{
+			photosParser,
+			allLineParser,
 		}, handler, 100*time.Millisecond)
 	}(t)
 	// Wait until handler executes
