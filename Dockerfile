@@ -37,4 +37,4 @@ ENV BUFFERSIZE=$BUFFERSIZE
 ENV MAXTOKENS=$MAXTOKENS
 ENV GPTMODEL=$GPTMODEL
 
-CMD /doctorgpt --logfile=$LOGFILE --configfile=$CONFIGFILE --outdir=$OUTDIR --budlingtimeoutseconds=$BUNDLINGTIMESECONDS --debug=$DEBUG --buffersize=$BUFFERSIZE --maxtokens=$MAXTOKENS --gptmodel=$GPTMODEL
+CMD /usr/bin/doctorgpt --logfile=$LOGFILE --configfile=$CONFIGFILE --outdir=$OUTDIR --budlingtimeoutseconds=$BUNDLINGTIMESECONDS --debug=$DEBUG --buffersize=$BUFFERSIZE --maxtokens=$MAXTOKENS --gptmodel=$GPTMODEL
