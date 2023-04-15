@@ -142,7 +142,6 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 		buffer := logBuffers[key]
 		buffer.Append(entry)
 
-		lineSpoofed := false
 		// Check if the log entry indicates an error
 		log.Debugf("Should filter: %v", entry.Filtered)
 		log.Debugf("Should diagnose: %v", !entry.Filtered && entry.Triggered)
@@ -170,21 +169,35 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 					var matched int
 					entry, matched, err = parseLogEntry(log, parsers, l.Text, lineNum)
 					if err != nil {
-						log.Fatalf("Error parsing log entry (%s)", l)
+						log.Fatalf("Error parsing log entry (%s)", l.Text)
 					}
 
 					// TODO: Have an optional "bundle" line limit to avoid packing too much context after the error
-					if matched == len(parsers)-1 || matched == parserMatched && (!entry.Filtered && entry.Triggered) {
+					// TODO: Do not rely on location for the default parser
+					if matched == len(parsers)-1 || (matched == parserMatched && !entry.Filtered && entry.Triggered) {
 						// Matched default parser OR
-						// If follow-ups match the same parser and they are triggers
-						log.Debugf("Appending to buffer: (%s)", l)
+						// Matched the same parser and it was triggered
+						log.Debugf("Default parser matched: (%v)", matched == len(parsers)-1)
+						log.Debugf("Appending to buffer: (%v)", entry)
 						buffer := logBuffers[key]
 						buffer.Append(entry)
 					} else {
 						// Spoof line and go back to top
-						log.Debugf("Spoofing: (%s)", l)
+						log.Debugf("Spoofing: (%s)", l.Text)
 						line = l
-						lineSpoofed = true
+
+						// TODO: Deduplicate this logic
+
+						// dump log context buffer
+						dumpedBuffer := logBuffers[key].Dump()
+
+						go func() {
+							err := handler(log, fileName, outputDir, apiKey, model, entryToDiagnose, dumpedBuffer)
+							if err != nil {
+								log.Errorf("Handler failed: %v", err)
+							}
+						}()
+						goto top
 					}
 				}
 			}
@@ -201,10 +214,6 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 					log.Errorf("Handler failed: %v", err)
 				}
 			}()
-			if lineSpoofed {
-				lineSpoofed = false
-				goto top
-			}
 		}
 	}
 }

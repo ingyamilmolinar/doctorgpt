@@ -22,6 +22,7 @@ DoctorGPT will start tailing `program.log` (without stopping). Each user-defined
 ## Configuration
 See example yaml documentation:
 ```yaml
+# Prompt to be sent alongside error context to the GPT API
 prompt: "You are ErrorDebuggingGPT. Your sole purpose in this world is to help software engineers by diagnosing software system errors and bugs that can occur in any type of computer system. The message following the first line containing \"ERROR:\" up until the end of the prompt is a computer error no more and no less. It is your job to try to diagnose and fix what went wrong. Ready?\nERROR:\n$ERROR"
 
 parsers:
@@ -29,27 +30,30 @@ parsers:
   # Matches line: [1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000
   - regex: '^\[(\d{4}\/\d{6}\.\d{6}):(?P<LEVEL>\w+):([\w\.\_]+)\(\d+\)\]\s+(?P<MESSAGE>.*)$'
 
-  # Conditions in which the parsed log will trigger a diagnosis
+    # Conditions in which the parsed log will trigger a diagnosis
     triggers:
-      "LEVEL": "ERROR"
+      - variable: "LEVEL"
+        regex:    "ERROR"
 
-  # Conditions in which the parsed log will be ignored for triggers
+    # Conditions in which the parsed log will be ignored for triggers
     filters:
-      "MESSAGE": "HTTP 401"
+      - variable: "MESSAGE"
+        regex:    "HTTP 401"
 
   # Matches line:  2022-01-27 21:37:36.776 0x2eb3     Default       511 photolibraryd: PLModelMigration.m:314   Creating sqlite error indicator file
   - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
 
   # When more than one triggers is present, just one trigger is sufficient to trigger a diagnosis
     triggers:
-      "LEVEL": "Default"
-      "MESSAGE": "(?i)ERROR:"
-
-  # Filters are optional
+      - variable: "LEVEL"
+        regex:    "Default"
+      - variable: "MESSAGE"
+        regex:    "(?i)ERROR:"
+    # Filters are optional
 
   # Last parser must always be a generic one that matches any line
   - regex: '^(?P<MESSAGE>.*)$'
-  # Both filters and triggers are optional
+    # Both filters and triggers are optional
 ```
 
 ## Examples
@@ -140,16 +144,15 @@ Build from source:
 3. Configurable chatGPT prompt
 4. Supports every GPT model version
 5. Match multiple log formats within the same file
-6. Match multiple parsers for the same log entry (with different variable only)
-7. Match multiple filters for the same log entry (with different variable only)
+6. Match multiple parsers for the same log entry
+7. Match multiple filters for the same log entry
 8. Support custom variable names
 9. Powerful regex format (Perl/Go flavor)
 10. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
 1. Dividing log contexts per custom regex match in variable values
-2. Support multiple patterns for the same regex variable name
-3. Filter logs from the context (for sensitive or spammy information)
+2. Filter logs from the context (for sensitive or spammy information)
 
 ## Future work
 1. Structured logging parsing

@@ -25,12 +25,16 @@ func parseLogEntry(log *zap.SugaredLogger, parsers []parser, line string, lineNu
 	for i, parser := range parsers {
 		entry, err = parser.Parse(log, line, lineNum)
 		if err == nil {
-			log.Debugf("Matched: i (%d): Regex (%s), Line (%s)", i, parser.regex, line)
+			log.Debugf("MATCHED: i (%d): Regex (%s), Line (%s)", i, parser.regex, line)
 			if entry.Filtered {
-				log.Debugf("Filtered: i (%d): Filters (%v), Line (%s)", i, parser.filters, line)
+				log.Debugf("FILTERED: i (%d): Filters (%v), Line (%s)", i, parser.filters, line)
+			} else {
+				log.Debugf("NOT FILTERED: i (%d): Filters (%v), Line (%s)", i, parser.filters, line)
 			}
 			if entry.Triggered {
-				log.Debugf("Triggered: i (%d): Triggers (%v), Line (%s)", i, parser.triggers, line)
+				log.Debugf("TRIGGERED: i (%d): Triggers (%v), Line (%s)", i, parser.triggers, line)
+			} else {
+				log.Debugf("NOT TRIGGERED: i (%d): Triggers (%v), Line (%s)", i, parser.triggers, line)
 			}
 			return entry, i, nil
 		}
@@ -48,7 +52,7 @@ type parser struct {
 	filters   []filter
 }
 
-func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex map[string]string) (parser, error) {
+func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex []variableMatcher) (parser, error) {
 	// TODO: Get variables and save them to map
 	re, err := regexp.Compile(regex)
 	if err != nil {
@@ -67,13 +71,15 @@ func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex
 	}
 
 	var filters []filter
-	for k, v := range filtersRegex {
+	for _, matcher := range filtersRegex {
+		variable := matcher.Variable
+		regex := matcher.Regex
 		// check if variable is part of variable list
-		_, ok := variableSet[k]
+		_, ok := variableSet[variable]
 		if !ok {
-			return parser{}, fmt.Errorf("variable (%s) in filter is not a regex variable", k)
+			return parser{}, fmt.Errorf("variable (%s) in filter is not a regex variable", variable)
 		}
-		filter, err := newFilter(k, v)
+		filter, err := newFilter(variable, regex)
 		if err != nil {
 			return parser{}, err
 		}
@@ -81,13 +87,15 @@ func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex
 	}
 
 	var triggers []trigger
-	for k, v := range triggersRegex {
+	for _, matcher := range triggersRegex {
+		variable := matcher.Variable
+		regex := matcher.Regex
 		// check if variable is part of variable list
-		_, ok := variableSet[k]
+		_, ok := variableSet[variable]
 		if !ok {
-			return parser{}, fmt.Errorf("variable (%s) in trigger is not a regex variable", k)
+			return parser{}, fmt.Errorf("variable (%s) in trigger is not a regex variable", variable)
 		}
-		trigger, err := newTrigger(k, v)
+		trigger, err := newTrigger(variable, regex)
 		if err != nil {
 			return parser{}, err
 		}
@@ -197,7 +205,7 @@ func (f filter) Match(log *zap.SugaredLogger, entry logEntry) bool {
 		log.Debugf("Variable not found in entry (%s)", entry.Text)
 		return false
 	}
-	log.Debugf("Trying to match regex (%v)", f.re)
+	log.Debugf("Trying to match regex (%s)", f.re.String())
 	return f.re.MatchString(value)
 }
 
@@ -210,6 +218,6 @@ func (t trigger) Match(log *zap.SugaredLogger, entry logEntry) bool {
 		log.Debugf("Variable not found in entry (%s)", entry.Text)
 		return false
 	}
-	log.Debugf("Trying to match regex (%v)", t.re)
+	log.Debugf("Trying to match regex (%s)", t.re.String())
 	return t.re.MatchString(value)
 }
