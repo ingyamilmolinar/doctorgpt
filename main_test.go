@@ -304,15 +304,59 @@ func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
 		},
 		expectedEntry,
 	}
+
+	expectedEntry2 := logEntry{
+		Parser:    &photosParser,
+		Filtered:  false,
+		Triggered: true,
+		Text:      "2023-02-28 18:55:19.381 0x7f70b    Default      2750 photolibraryd: PLModelMigrationActionUtility.m:69    Failed updating attributes. Error: Error Domain=com.apple.photos.error Code=41004 \"Missing metadata for asset E59700B1-CF52-47FD-86B5-6835F995AAF8. File not on disk\" UserInfo={NSLocalizedDescription=Missing metadata for asset E59700B1-CF52-47FD-86B5-6835F995AAF8. File not on disk}",
+		LineNo:    4,
+		Variables: map[string]string{
+			"DATE":          "2023-02-28",
+			"TIME":          "18:55:19.381",
+			"LEVEL":         "Default",
+			"PID":           "2750",
+			"PROCNAME":      "photolibraryd:",
+			"FILEANDLINENO": "PLModelMigrationActionUtility.m:69",
+			"MESSAGE":       "Failed updating attributes. Error: Error Domain=com.apple.photos.error Code=41004 \"Missing metadata for asset E59700B1-CF52-47FD-86B5-6835F995AAF8. File not on disk\" UserInfo={NSLocalizedDescription=Missing metadata for asset E59700B1-CF52-47FD-86B5-6835F995AAF8. File not on disk}",
+		},
+	}
+	expectedContext2 := []logEntry{
+		{
+			Parser:    &photosParser,
+			Filtered:  false,
+			Triggered: false,
+			Text:      "2022-01-27 21:37:36.777 0x2eb3     Default       511 photolibraryd: PLModelMigration.m:350   Starting migration stage from version 14300 to 15054, with model /System/Library/PrivateFrameworks/PhotoLibraryServices.framework/Resources/photos-15054-STAGED.mom.",
+			LineNo:    3,
+			Variables: map[string]string{
+				"DATE":          "2022-01-27",
+				"TIME":          "21:37:36.777",
+				"LEVEL":         "Default",
+				"PID":           "511",
+				"PROCNAME":      "photolibraryd:",
+				"FILEANDLINENO": "PLModelMigration.m:350",
+				"MESSAGE":       "Starting migration stage from version 14300 to 15054, with model /System/Library/PrivateFrameworks/PhotoLibraryServices.framework/Resources/photos-15054-STAGED.mom.",
+			},
+		},
+		expectedEntry2,
+	}
 	// create validation function
+	// we expect the logs to produce two rounds of error diagnosis
+	round := 1
 	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
-		require.Equal(t, expectedEntry, entryToDiagnose)
-		require.Equal(t, expectedContext, logContext)
+		if round == 1 {
+			require.Equal(t, expectedEntry, entryToDiagnose)
+			require.Equal(t, expectedContext, logContext)
+		} else if round == 2 {
+			require.Equal(t, expectedEntry2, entryToDiagnose)
+			require.Equal(t, expectedContext2, logContext)
+		}
 		wg.Done()
+		round++
 		return nil
 	}
 	// Send process for a spin.
-	wg.Add(1)
+	wg.Add(2)
 	go func(t *testing.T) {
 		monitorLogLoop(logger.Sugar(), "testlogs/photos.log", "", "", "", 10, 8000, []parser{
 			photosParser,
@@ -378,4 +422,9 @@ func TestBuffer(t *testing.T) {
 	require.Equal(t, expectedBuffer, buffer.buffer)
 	// Dump should skip entry3 since entry4 + entry5 == 30 chars
 	require.Equal(t, entries[3:], buffer.Dump())
+
+	buffer.Clear()
+	require.Equal(t, make([]logEntry, 3, 3), buffer.buffer)
+	require.Equal(t, 0, buffer.pointer)
+	require.Equal(t, 0, buffer.capacity)
 }

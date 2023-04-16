@@ -31,8 +31,10 @@ func (lb *logBuffer) Append(entry logEntry) {
 	lb.logger.Debugf("Appending into index: %d", lb.pointer)
 	lb.buffer[lb.pointer] = entry
 	lb.pointer = (lb.pointer + 1) % lb.size
-	// TODO: Limit capacity?
-	lb.capacity = lb.capacity + 1
+	// TODO: It is weird that capacity can be > size
+	if lb.capacity <= lb.size {
+		lb.capacity = lb.capacity + 1
+	}
 	lb.logger.Debugf("New pointer: %d", lb.pointer)
 	lb.logger.Debugf("New capacity: %d", lb.capacity)
 }
@@ -56,6 +58,12 @@ func (lb logBuffer) Dump() []logEntry {
 	trimmedSlice := trimSlice(lb.logger, lb.buffer[0:lb.pointer], lb.maxTokens)
 	lb.logger.Debugf("Dump: %s", stringify(trimmedSlice))
 	return trimmedSlice
+}
+
+func (lb *logBuffer) Clear() {
+	lb.pointer = 0
+	lb.capacity = 0
+	lb.buffer = make([]logEntry, lb.size, lb.size)
 }
 
 func (lb logBuffer) String() string {
