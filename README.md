@@ -7,7 +7,7 @@ DoctorGPT is a lightweight self-contained binary that monitors your application 
 ## Usage
 `OPENAI_KEY=$YOUR_KEY doctorgpt --logfile="program.log" --configfile="config.yaml" --outdir="~/errors"`
 
-DoctorGPT will start tailing `program.log` (without stopping). Each user-defined trigger for a user-defined parser log line event will generate a diagnosis file under directory `~/errors`. `config.yaml` file is used at startup to configure the program.
+DoctorGPT will start tailing `program.log` (without stopping). For each log line, user-defined parsers triggering a diagnosis event (based on regex variable matches) will generate a diagnosis file (see example below) under directory `~/errors` using the triggered log line and all previous log context using the OpenAI API. `config.yaml` file is used at startup to configure the program.
 
 ## CLI flags
 - `--logfile (string)` log file to tail and monitor

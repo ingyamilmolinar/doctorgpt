@@ -187,10 +187,9 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 						line = l
 
 						// TODO: Deduplicate this logic
-
-						// dump log context buffer
+						// dump log context buffer and clear
 						dumpedBuffer := logBuffers[key].Dump()
-
+						logBuffers[key].Clear()
 						go func() {
 							err := handler(log, fileName, outputDir, apiKey, model, entryToDiagnose, dumpedBuffer)
 							if err != nil {
@@ -202,8 +201,9 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 				}
 			}
 
-			// dump log context buffer
+			// dump log context buffer and clear
 			dumpedBuffer := logBuffers[key].Dump()
+			logBuffers[key].Clear()
 
 			// Async call the ChatGPT API
 			// TODO: We need persistance to make sure all errors are reported
