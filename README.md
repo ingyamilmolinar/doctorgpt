@@ -36,24 +36,31 @@ parsers:
         regex:    "ERROR"
 
     # Conditions in which the parsed log will be ignored for triggers
+    # To create exceptions which won't trigger the GPT API
     filters:
       - variable: "MESSAGE"
         regex:    "HTTP 401"
 
+    # Conditions in which the parsed log will be ignored and excluded from the API context
+    # For sensitive or spammy log entries. These will never be sent to the GPT API
+    excludes:
+      - variable: "LEVEL"
+        regex:    "DEBUG"
+
   # Matches line:  2022-01-27 21:37:36.776 0x2eb3     Default       511 photolibraryd: PLModelMigration.m:314   Creating sqlite error indicator file
   - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
 
-  # When more than one triggers is present, just one trigger is sufficient to trigger a diagnosis
+  # When more than one trigger is present, just one trigger is sufficient to trigger a diagnosis
     triggers:
       - variable: "LEVEL"
         regex:    "Default"
       - variable: "MESSAGE"
         regex:    "(?i)ERROR:"
-    # Filters are optional
+    # Filters and excludes are optional
 
   # Last parser must always be a generic one that matches any line
   - regex: '^(?P<MESSAGE>.*)$'
-    # Both filters and triggers are optional
+    # All filters, triggers and excludes are optional
 ```
 
 ## Examples
@@ -127,8 +134,8 @@ If you still encounter issues, double-check your Prisma configuration, as well a
 ```
 
 ## Installation
-Using `go install:
-1. `go install "github.com/ingyamilmolinar/doctorgpt"`
+Using `go install`:
+- `go install "github.com/ingyamilmolinar/doctorgpt"`
 
 Build from source:
 1. `go build -o doctorgpt`
@@ -146,13 +153,14 @@ Build from source:
 5. Match multiple log formats within the same file
 6. Match multiple parsers for the same log entry
 7. Match multiple filters for the same log entry
-8. Support custom variable names
-9. Powerful regex format (Perl/Go flavor)
-10. Maximize the amount of log context in the diagnosis
+8. Ignore logs from being part of the context (for sensitive or spammy information)
+9. Support custom variable names
+10. Powerful regex format (Perl/Go flavor)
+11. Maximize the amount of log context in the diagnosis
 
 ## Work in progress
 1. Dividing log contexts per custom regex match in variable values
-2. Filter logs from the context (for sensitive or spammy information)
+2. Create a library of common log parsers
 
 ## Future work
 1. Structured logging parsing
@@ -160,15 +168,17 @@ Build from source:
 3. Production readiness (security, auth, monitoring, optimization, more tests...)
 4. Support custom types (for non-regex matching)
 5. Sentry SDK integration
-6. Generate a config.yaml based on real life log examples (use code or GPT to generate regex)
+6. Generate a config.yaml based on real life log examples (personalized `init`)
 7. "From SCRATCH" lightweight docker image
-8. Helm chart?
-9. Windows / Mac support?
-10. Other AI model APIs?
-11. Send diagnosis requests to a server for later consumption (agent/server architecture)?
+8. Compile a comprehensive regex library from well-known log patterns
+9. Helm chart?
+10. Windows / Mac support?
+11. Other AI model APIs?
+12. Send diagnosis requests to a server for later consumption (agent/server architecture)?
 
 ## Testing (Tests do not use OpenAI API)
-`go test ./...`
+- `go test ./...`
+- `go test -v ./...` (verbose mode)
 
 ## Contributing
 Feel free to open an issue with your suggestion on how to make this program more useful, portable, efficient and production-ready (and of course BUGS!).

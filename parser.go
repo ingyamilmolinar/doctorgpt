@@ -11,6 +11,7 @@ type logEntry struct {
 	Parser    *parser
 	Triggered bool
 	Filtered  bool
+	Excluded  bool
 	Text      string
 	LineNo    int
 	// TODO: Support date and time
@@ -36,6 +37,11 @@ func parseLogEntry(log *zap.SugaredLogger, parsers []parser, line string, lineNu
 			} else {
 				log.Debugf("NOT TRIGGERED: i (%d): Triggers (%v), Line (%s)", i, parser.triggers, line)
 			}
+			if entry.Excluded {
+				log.Debugf("EXCLUDED: i (%d): Excludes (%v), Line (%s)", i, parser.excludes, line)
+			} else {
+				log.Debugf("NOT EXCLUDED: i (%d): Excludes (%v), Line (%s)", i, parser.excludes, line)
+			}
 			return entry, i, nil
 		}
 		log.Debugf("Not matched: %v", err)
@@ -48,12 +54,12 @@ type parser struct {
 	regex     string
 	re        regexp.Regexp
 	variables []string
-	triggers  []trigger
-	filters   []filter
+	triggers  []Matcher
+	filters   []Matcher
+	excludes  []Matcher
 }
 
-func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex []variableMatcher) (parser, error) {
-	// TODO: Get variables and save them to map
+func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex, excludesRegex []variableMatcher) (parser, error) {
 	re, err := regexp.Compile(regex)
 	if err != nil {
 		return parser{}, err
@@ -70,48 +76,66 @@ func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex
 		variableSet[variable] = true
 	}
 
-	var filters []filter
-	for _, matcher := range filtersRegex {
-		variable := matcher.Variable
-		regex := matcher.Regex
+	var filters []Matcher
+	for _, filter := range filtersRegex {
+		variable := filter.Variable
+		regex := filter.Regex
 		// check if variable is part of variable list
 		_, ok := variableSet[variable]
 		if !ok {
 			return parser{}, fmt.Errorf("variable (%s) in filter is not a regex variable", variable)
 		}
-		filter, err := newFilter(variable, regex)
+		filter, err := newMatcher(log, variable, regex)
 		if err != nil {
 			return parser{}, err
 		}
 		filters = append(filters, filter)
 	}
 
-	var triggers []trigger
-	for _, matcher := range triggersRegex {
-		variable := matcher.Variable
-		regex := matcher.Regex
+	var triggers []Matcher
+	for _, trigger := range triggersRegex {
+		variable := trigger.Variable
+		regex := trigger.Regex
 		// check if variable is part of variable list
 		_, ok := variableSet[variable]
 		if !ok {
 			return parser{}, fmt.Errorf("variable (%s) in trigger is not a regex variable", variable)
 		}
-		trigger, err := newTrigger(variable, regex)
+		trigger, err := newMatcher(log, variable, regex)
 		if err != nil {
 			return parser{}, err
 		}
 		triggers = append(triggers, trigger)
 	}
 
+	var excludes []Matcher
+	for _, exclude := range excludesRegex {
+		variable := exclude.Variable
+		regex := exclude.Regex
+		// check if variable is part of variable list
+		_, ok := variableSet[variable]
+		if !ok {
+			return parser{}, fmt.Errorf("variable (%s) in exclude is not a regex variable", variable)
+		}
+		exclude, err := newMatcher(log, variable, regex)
+		if err != nil {
+			return parser{}, err
+		}
+		excludes = append(excludes, exclude)
+	}
+
 	log.Debugf("New parser: (%s)", regex)
 	log.Debugf("Variables: (%v)", variables)
 	log.Debugf("Filters: (%v)", filters)
 	log.Debugf("Triggers: (%v)", triggers)
+	log.Debugf("Excludes: (%v)", excludes)
 	return parser{
 		regex:     regex,
 		re:        *re,
 		variables: variables,
 		filters:   filters,
 		triggers:  triggers,
+		excludes:  excludes,
 	}, nil
 }
 
@@ -139,9 +163,10 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 	}
 
 	// Set Filtered
+	// TODO: Support boolean primitives
 	for _, filter := range p.filters {
 		log.Debugf("Matching filter: (%v)", filter)
-		if filter.Match(log, entry) {
+		if filter.Match(entry) {
 			log.Debugf("Matched filter: (%v)", filter)
 			entry.Filtered = true
 			break
@@ -149,12 +174,23 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 	}
 
 	// Set Triggered
-	// TODO: Make this behave like an AND
+	// TODO: Support boolean primitives
 	for _, trigger := range p.triggers {
 		log.Debugf("Matching trigger: (%v)", trigger)
-		if trigger.Match(log, entry) {
+		if trigger.Match(entry) {
 			log.Debugf("Matched trigger: (%v)", trigger)
 			entry.Triggered = true
+			break
+		}
+	}
+
+	// Set excluded
+	// TODO: Support boolean primitives
+	for _, exclude := range p.excludes {
+		log.Debugf("Matching exclude: (%v)", exclude)
+		if exclude.Match(entry) {
+			log.Debugf("Matched exclude: (%v)", exclude)
+			entry.Excluded = true
 			break
 		}
 	}
@@ -163,61 +199,36 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 }
 
 // TODO: Composing multiple logical conditions in a single trigger
-type filter struct {
+type matcher struct {
 	variable string
 	re       regexp.Regexp
+	log      *zap.SugaredLogger
 }
 
-func newFilter(variable, regex string) (filter, error) {
+type Matcher interface {
+	Match(entry logEntry) bool
+}
+
+func newMatcher(log *zap.SugaredLogger, variable, regex string) (Matcher, error) {
 	re, err := regexp.Compile(regex)
 	if err != nil {
-		return filter{}, fmt.Errorf("regex is not valid (%s)", regex)
+		return matcher{}, fmt.Errorf("regex is not valid (%s)", regex)
 	}
-	return filter{
+	return matcher{
 		variable: variable,
 		re:       *re,
+		log:      log,
 	}, nil
 }
 
-// TODO: Composing multiple logical conditions in a single trigger
-type trigger struct {
-	variable string
-	re       regexp.Regexp
-}
-
-func newTrigger(variable, regex string) (trigger, error) {
-	re, err := regexp.Compile(regex)
-	if err != nil {
-		return trigger{}, fmt.Errorf("regex is not valid (%s)", regex)
-	}
-	return trigger{
-		variable: variable,
-		re:       *re,
-	}, nil
-}
-
-// TODO: Deduplicate this
-func (f filter) Match(log *zap.SugaredLogger, entry logEntry) bool {
+func (m matcher) Match(entry logEntry) bool {
 	// Decode entry into json field map
-	log.Debugf("Variable (%s) map (%v)", f.variable, entry.Variables)
-	value, ok := entry.Variables[f.variable]
+	m.log.Debugf("Variable (%s) map (%v)", m.variable, entry.Variables)
+	value, ok := entry.Variables[m.variable]
 	if !ok {
-		log.Debugf("Variable not found in entry (%s)", entry.Text)
+		m.log.Debugf("Variable not found in entry (%s)", entry.Text)
 		return false
 	}
-	log.Debugf("Trying to match regex (%s)", f.re.String())
-	return f.re.MatchString(value)
-}
-
-// TODO: Deduplicate this
-func (t trigger) Match(log *zap.SugaredLogger, entry logEntry) bool {
-	// Decode entry into json field map
-	log.Debugf("Variable (%s) map (%v)", t.variable, entry.Variables)
-	value, ok := entry.Variables[t.variable]
-	if !ok {
-		log.Debugf("Variable not found in entry (%s)", entry.Text)
-		return false
-	}
-	log.Debugf("Trying to match regex (%s)", t.re.String())
-	return t.re.MatchString(value)
+	m.log.Debugf("Trying to match regex (%s)", m.re.String())
+	return m.re.MatchString(value)
 }

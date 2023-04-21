@@ -22,6 +22,7 @@ type parserConfig struct {
 	Regex    string            `yaml:"regex"`
 	Triggers []variableMatcher `yaml:"triggers,omitempty"`
 	Filters  []variableMatcher `yaml:"filters,omitempty"`
+	Excludes []variableMatcher `yaml:"excludes,omitempty"`
 }
 
 type variableMatcher struct {

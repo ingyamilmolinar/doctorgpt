@@ -80,7 +80,7 @@ func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider 
 
 	var parsers []parser
 	for _, parser := range config.Parsers {
-		parser, err := newParser(log, parser.Regex, parser.Filters, parser.Triggers)
+		parser, err := newParser(log, parser.Regex, parser.Filters, parser.Triggers, parser.Excludes)
 		if err != nil {
 			return nil, fmt.Errorf("invalid config file: %w", err)
 		}
@@ -128,6 +128,12 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 		if err != nil {
 			log.Fatalf("Error parsing log entry (%s)", line)
 		}
+
+		// If entry is excluded, ignore it
+		if entry.Excluded {
+			continue
+		}
+
 		// TODO: Divide into buffers depending on granularity
 		key := "DEFAULT"
 		log.Debugf("Process key (%s)", key)
@@ -170,6 +176,11 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 					entry, matched, err = parseLogEntry(log, parsers, l.Text, lineNum)
 					if err != nil {
 						log.Fatalf("Error parsing log entry (%s)", l.Text)
+					}
+
+					// If entry is excluded, ignore it
+					if entry.Excluded {
+						continue
 					}
 
 					// TODO: Have an optional "bundle" line limit to avoid packing too much context after the error
