@@ -17,9 +17,9 @@ var nodeLogParser, _ = newParser(logger.Sugar(), "^\\[(?P<LEVEL>\\w+)\\]\\s+(?P<
 		Variable: "LEVEL",
 		Regex:    "ERROR",
 	},
-})
+}, []variableMatcher{})
 
-var allLineParser, _ = newParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{})
+var allLineParser, _ = newParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{}, []variableMatcher{})
 
 type expectedEntry struct {
 	logEntry      logEntry
@@ -108,7 +108,7 @@ var dropboxParser, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6})
 		Variable: "LEVEL",
 		Regex:    "ERROR",
 	},
-})
+}, []variableMatcher{})
 
 func TestDropboxLogExample(t *testing.T) {
 	var wg sync.WaitGroup
@@ -185,7 +185,7 @@ var dropboxParserWithFilters, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6
 		Variable: "LEVEL",
 		Regex:    "ERROR",
 	},
-})
+}, []variableMatcher{})
 
 func TestDropboxLogExampleWithFilters(t *testing.T) {
 	var wg sync.WaitGroup
@@ -255,6 +255,75 @@ func TestDropboxLogExampleWithFilters(t *testing.T) {
 	wg.Wait()
 }
 
+var dropboxParserWithExcludes, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+	{
+		Variable: "LEVEL",
+		Regex:    "ERROR",
+	},
+}, []variableMatcher{
+	{
+		Variable: "LEVEL",
+		Regex:    "WARNING",
+	},
+})
+
+func TestDropboxLogExampleWithExcludes(t *testing.T) {
+	var wg sync.WaitGroup
+	expectedEntry := logEntry{
+		Parser:    &dropboxParserWithExcludes,
+		Triggered: true,
+		Excluded:  false,
+		Text:      "[1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000",
+		LineNo:    2,
+		Variables: map[string]string{
+			"LEVEL":   "ERROR",
+			"MESSAGE": "Unable to move cache folder GPUCache to old_GPUCache_000",
+		},
+	}
+	expectedContext := []logEntry{
+		expectedEntry,
+		{
+			Parser:    &dropboxParserWithExcludes,
+			Triggered: true,
+			Excluded:  false,
+			Text:      "[1217/201832.973523:ERROR:disk_cache.cc(184)] Unable to create cache",
+			LineNo:    3,
+			Variables: map[string]string{
+				"LEVEL":   "ERROR",
+				"MESSAGE": "Unable to create cache",
+			},
+		},
+		{
+			Parser:    &dropboxParserWithExcludes,
+			Triggered: true,
+			Excluded:  false,
+			Text:      "[1217/201832.973606:ERROR:shader_disk_cache.cc(622)] Shader Cache Creation failed: -2",
+			LineNo:    4,
+			Variables: map[string]string{
+				"LEVEL":   "ERROR",
+				"MESSAGE": "Shader Cache Creation failed: -2",
+			},
+		},
+	}
+	// create validation function
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+		require.Equal(t, expectedEntry, entryToDiagnose)
+		require.Equal(t, expectedContext, logContext)
+		wg.Done()
+		return nil
+	}
+	// Send process for a spin.
+	wg.Add(1)
+	go func(t *testing.T) {
+		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
+			dropboxParserWithExcludes,
+			allLineParser,
+		}, handler, 100*time.Millisecond)
+	}(t)
+	// Wait until handler executes
+	wg.Wait()
+}
+
 // We do not match the hash in a variable on purpose
 var photosParser, _ = newParser(logger.Sugar(), "^(?P<DATE>[^ ]+)\\s+(?P<TIME>[^ ]+)\\s+[^ ]+\\s+(?P<LEVEL>[^ ]+)\\s+(?P<PID>[^ ]+)\\s+(?P<PROCNAME>[^ ]+)\\s+(?P<FILEANDLINENO>[^ ]+)\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
 	{
@@ -265,7 +334,7 @@ var photosParser, _ = newParser(logger.Sugar(), "^(?P<DATE>[^ ]+)\\s+(?P<TIME>[^
 		Variable: "MESSAGE",
 		Regex:    "Error:", // will  match lines 4-5
 	},
-})
+}, []variableMatcher{})
 
 func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
 	var wg sync.WaitGroup

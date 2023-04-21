@@ -7,6 +7,9 @@ parsers:
     filters:
       - variable: "MESSAGE"
         regex:    "HTTP 401"
+    excludes:
+      - variable: "LEVEL"
+        regex:    "DEBUG"
 
   - regex: '^(?P<DATE>[^ ]+)\s+(?P<TIME>[^ ]+)\s+[^ ]+(?P<LEVEL>[^ ]+)\s+(?P<MESSAGE>.*)$'
     triggers:
