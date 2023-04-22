@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"regexp"
+	"strconv"
 )
 
 // Struct representing a single log entry (message can be a multi-line string)
@@ -75,6 +76,9 @@ func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex
 		variables = append(variables, variable)
 		variableSet[variable] = true
 	}
+
+	// We add a special LINENO variable to track the log line num
+	variableSet["LINENO"] = true
 
 	var filters []Matcher
 	for _, filter := range filtersRegex {
@@ -154,6 +158,10 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 		result[variable] = matches[i]
 		log.Debugf("Variable: (%s), Match: (%s)", variable, matches[i])
 	}
+
+	// We add a special LINENO variable to match on line num
+	result["LINENO"] = strconv.Itoa(lineNum)
+	log.Debugf("Variable: (%s), Match: (%s)", "LINENO", strconv.Itoa(lineNum))
 
 	entry := logEntry{
 		Parser:    &p,
