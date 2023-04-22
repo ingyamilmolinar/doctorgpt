@@ -1,0 +1,39 @@
+parsers:
+  # Apache error log
+	- regex: '^(?P<TIMESTAMP>\w{3}\s+\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{3})\s+(?P<PROCESS>[^\s]+)\s+\[(?P<LEVEL>[^\]]+)\]\s*(?P<MESSAGE>.*)$'
+
+	# Nginx error log
+  - regex: '^(?P<TIMESTAMP>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})\s+\[(?P<LEVEL>error|warn)\]\s+\d+#\d+: \*\d+\s(?P<MESSAGE>.*)$'
+
+	# MySQL error log
+	- regex: '^(?P<TIMESTAMP>\d{6}\s+\d{1,2}:\d{2}:\d{2})\s+(?P<LEVEL>\w+)\s+\[(?P<PROCESSID>\d+)\]\s+(?P<MESSAGE>((?:.*?\n)*?.*?))(?:,\s*client: (?P<CLIENT>.*?))?(?P<EXTRAINFO>\s*?:\s*?(.*))?$'
+
+	# Docker error log
+	- regex: '^(?P<TIMESTAMP>[\dT:.+-]+)\s+(?P<STREAM>stdout|stderr)\s+(?P<LEVEL>[a-z]+)\s+(?P<MESSAGE>.*)$'
+
+	# Apache access log
+	- regex: '^(?P<IP>[\d.]+) (?P<IDENTITY>\S+) (?P<USER>\S+) \[(?P<TIMESTAMP>.+)\] "(?P<METHOD>[A-Z]+) (?P<PATH>.+) HTTP/(?P<HTTPVERSION>[\d.]+)" (?P<STATUS>\d+) (?P<SIZE>\d+) "(?P<REFERRER>.*)" "(?P<USERAGENT>.*)"$'
+
+	# SSH log
+	- regex: '^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(?P<HOST>\S+)\s+(?P<USER>\S+): (?P<MESSAGE>.*)$'
+
+	# Syslog
+	- regex: '^(?P<TIMESTAMP>\w{3}\s+\d{2}\s+\d{2}:\d{2}:\d{2})\s+(?P<SERVICE>[^\s\[]+)\[(?P<PID>\d+)\]\s*:(?P<MESSAGE>.*)$'
+
+	# Syslog 2
+	- regex: '^(?P<TIMESTAMP>(\w{3}\s{1,2}\d{1,2}\s\d{2}:\d{2}:\d{2})|(?:\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::\d{2})?)))\s+(?P<SYSLOG_HOSTNAME>[^\s]+)\s+(?P<SYSLOG_APPNAME>[^\s]+)(?:\[(?P<SYSLOG_PROCID>[^\]]+)\])?(?:\[(?P<SYSLOG_MSGID>[^\]]+)\])?\s*:\s*(?P<MESSAGE>.*)'
+
+	# Nginx access log
+	- regex: '^(?P<REMOTEADDRESS>[0-9\.]+) - (?P<USER>[^ ]+) \[(?P<TIMESTAMP>.+)\] "(?P<METHOD>[A-Z]+) (?P<PATH>[^ ]+) HTTP/(?P<HTTPVERSION>[\d.]+)" (?P<STATUS>\d+) (?P<SIZE>\d+) "(?P<REFERER>[^"]*)" "(?P<USERAGENT>[^"]*)"'
+
+	# SSH secure log
+	- regex: '^(?P<TIMESTAMP>\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}) (?P<HOSTNAME>[^ ]+) (?P<APPNAME>[^:]+): (?P<MESSAGE>.*)$'
+
+	# PostgreSQL log
+	- regex: '^(?P<DATE>\d{4}-\d{2}-\d{2})\s(?P<TIME>\d{2}:\d{2}:\d{2}\.\d+[-+]\d{2}:\d{2})\s(?P<LEVEL>\w+)\s+(?P<PROCESS>\d+)\s(?P<MESSAGE>.+)$'
+
+	# Windows event logs
+	- regex: '^(?P<DATETIME>\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\s(?P<SOURCENAME>[\w\-]+)\s(?P<SOURCEID>[^\s]+)\s(?P<LEVEL>\w+)\s(?P<USERID>.*?):\s(?P<MESSAGE>.*)$'
+
+	# Windows Event Logs 2
+	- regex: '^(?P<REMOTE_HOST>.*?)\s(?P<REMOTE_IDENT>.*?)\s(?P<REMOTE_USER>.*?)\s\[(?P<TIMESTAMP>.*?)\]\s\"(?P<REQUEST_METHOD>.*?)\s(?P<REQUEST_URL>.*?)\s(?P<REQUEST_PROTOCOL>.*?)\"\s(?P<STATUS_CODE>.*?)\s(?P<BYTES_SENT>.*?)\s\"(?P<HTTP_REFERER>.*?)\"\s\"(?P<HTTP_USER_AGENT>.*?)\"$'

@@ -66,7 +66,7 @@ func main() {
 
 	// This will effectively never end (it doesn't handle EOF)
 	timeoutDuration := time.Duration(*logBundlingTimeoutInSecs) * time.Second
-	monitorLogLoop(log, *logFilePath, *outputDir, apiKey, *gptModel, *bufferSize, *maxTokens, parsers, handleTrigger, timeoutDuration)
+	monitorLogLoop(log, *logFilePath, *outputDir, apiKey, *gptModel, *bufferSize, *maxTokens, parsers, handleTrigger, timeoutDuration, true)
 }
 
 func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider configProvider) ([]parser, error) {
@@ -104,11 +104,11 @@ func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider 
 	return parsers, nil
 }
 
-func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, bufferSize, maxTokens int, parsers []parser, handler handler, timeout time.Duration) {
+func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, bufferSize, maxTokens int, parsers []parser, handler handler, timeout time.Duration, follow bool) {
 	// Set up tail object to read log file
 	tailConfig := tail.Config{
-		Follow: true,
-		ReOpen: true,
+		Follow: follow,
+		ReOpen: follow,
 	}
 	t, err := tail.TailFile(fileName, tailConfig)
 	if err != nil {

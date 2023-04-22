@@ -56,14 +56,14 @@ parsers:
         regex:    "Default"
       - variable: "MESSAGE"
         regex:    "(?i)ERROR:"
-    # Filters and excludes are optional
+    # Filters and excludes were not specified
 
   # Last parser must always be a generic one that matches any line
   - regex: '^(?P<MESSAGE>.*)$'
-    # All filters, triggers and excludes are optional
+    # All filters, triggers and excludes were not specified
 ```
 
-## Examples
+## Example
 This is how the file `::Users::yamilmolinar::error.log:18.diagnosed` file looks like:
 ```
 LOG LINE:
@@ -133,6 +133,20 @@ This command will create the necessary tables in your database based on your Pri
 If you still encounter issues, double-check your Prisma configuration, as well as your database connection settings, and ensure your code logic is correct.
 ```
 
+## Parser library (to be enhanced)
+A library of common log parsers is contained in `config.yaml`. These parsers were tested against real logs in `testlogs/*_2k.log`. 
+
+1. Android
+2. Apache
+3. HDFS
+4. Hadoop
+5. Linux
+6. Mac
+7. Spark
+8. Windows
+
+See `parsers_test.go` for tests and [loghub](https://github.com/logpai/loghub) for more log samples.
+
 ## Installation
 Using `go install`:
 - `go install "github.com/ingyamilmolinar/doctorgpt"`
@@ -145,7 +159,7 @@ Build from source:
 1. A `Go` compiler (for building and running tests only)
 2. `docker` (optional)
 
-## Features (To be enhanced)
+## Features (to be enhanced)
 1. Environment independent self-sufficient lightweight (8.3MB) binary. (Windows support is missing but could be easily added)
 2. Alpine Linux Docker image
 3. Configurable chatGPT prompt
@@ -160,21 +174,18 @@ Build from source:
 
 ## Work in progress
 1. Dividing log contexts per custom regex match in variable values
-2. Create a library of common log parsers
+2. Enhance library of common log parsers
 
 ## Future work
 1. Structured logging parsing
-2. Release strategy & CI
-3. Production readiness (security, auth, monitoring, optimization, more tests...)
-4. Support custom types (for non-regex matching)
-5. Sentry SDK integration
-6. Generate a config.yaml based on real life log examples (personalized `init`)
-7. "From SCRATCH" lightweight docker image
-8. Compile a comprehensive regex library from well-known log patterns
-9. Helm chart?
-10. Windows / Mac support?
-11. Other AI model APIs?
-12. Send diagnosis requests to a server for later consumption (agent/server architecture)?
+2. Generate a config.yaml based on real life log examples (boottrap config using GPT)
+3. "From SCRATCH" lightweight docker image
+4. Release strategy & CI
+5. Windows / Mac support
+6. Support custom types (for timestamp comparisons, etc)
+7. Production readiness (security, auth, monitoring, optimization, more tests...)
+8. Sentry SDK integration
+9. Helm chart
 
 ## Testing (Tests do not use OpenAI API)
 - `go test ./...`
