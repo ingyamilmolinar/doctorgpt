@@ -149,15 +149,14 @@ See `parsers_test.go` for tests and [loghub](https://github.com/logpai/loghub) f
 
 ## Installation
 Using `go install`:
-- `go install "github.com/ingyamilmolinar/doctorgpt"`
-
-Build from source:
-1. `go build -o doctorgpt`
-2. Copy the `doctorgpt` binary anywhere under your $PATH (optional)
+- `GOBIN=/usr/local/bin go install "github.com/ingyamilmolinar/doctorgpt/agent"`
 
 ## Dependencies
 1. A `Go` compiler (for building and running tests only)
-2. `docker` (optional)
+2. `docker`  (for development)
+3. `k3d`     (for development)
+4. `kubectl` (for development)
+5. `make`    (for development)
 
 ## Features (to be enhanced)
 1. Environment independent self-sufficient lightweight (8.3MB) binary. (Windows support is missing but could be easily added)
@@ -179,7 +178,7 @@ Build from source:
 ## Future work
 1. Structured logging parsing
 2. Generate a config.yaml based on real life log examples (boottrap config using GPT)
-3. "From SCRATCH" lightweight docker image
+3. "FROM scratch" lightweight docker image
 4. Release strategy & CI
 5. Windows / Mac support
 6. Support custom types (for timestamp comparisons, etc)
@@ -187,9 +186,15 @@ Build from source:
 8. Sentry SDK integration
 9. Helm chart
 
+## Development
+- `export OPENAI_API=<your-api-key>`
+- `make k4d-create` (to create k3d cluster)
+- `make k3d-delete` (to delete k3d cluster)
+NOTE: See `Makefile` for more commands
+
 ## Testing (Tests do not use OpenAI API)
-- `go test ./...`
-- `go test -v ./...` (verbose mode)
+- `cd agent; go test ./...; cd -`
+- `cd agent; go test -v ./...; cd -` (verbose mode)
 
 ## Contributing
 Feel free to open an issue with your suggestion on how to make this program more useful, portable, efficient and production-ready (and of course BUGS!).

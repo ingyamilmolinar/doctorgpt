@@ -1,32 +1,34 @@
-package main
+package buffer
 
 import (
 	"fmt"
 	"go.uber.org/zap"
+
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/parser"
 )
 
-type logBuffer struct {
+type LogBuffer struct {
 	size      int
 	maxTokens int
 	pointer   int
 	capacity  int
-	buffer    []logEntry
+	buffer    []parser.LogEntry
 	logger    *zap.SugaredLogger
 }
 
-func newLogBuffer(log *zap.SugaredLogger, size, maxTokens int) *logBuffer {
+func NewLogBuffer(log *zap.SugaredLogger, size, maxTokens int) *LogBuffer {
 	log.Debugf("Initializing ring buffer of size %d and max tokens %d", size, maxTokens)
-	return &logBuffer{
+	return &LogBuffer{
 		size:      size,
 		maxTokens: maxTokens,
 		pointer:   0,
 		capacity:  0,
-		buffer:    make([]logEntry, size, size),
+		buffer:    make([]parser.LogEntry, size, size),
 		logger:    log,
 	}
 }
 
-func (lb *logBuffer) Append(entry logEntry) {
+func (lb *LogBuffer) Append(entry parser.LogEntry) {
 	// update pointer to oldest entry
 	lb.logger.Debugf("Appending into index: %d", lb.pointer)
 	lb.buffer[lb.pointer] = entry
@@ -39,38 +41,38 @@ func (lb *logBuffer) Append(entry logEntry) {
 	lb.logger.Debugf("New capacity: %d", lb.capacity)
 }
 
-func (lb logBuffer) Dump() []logEntry {
+func (lb LogBuffer) Dump() []parser.LogEntry {
 	lb.logger.Debugf("Dump capacity: %d", lb.capacity)
 	if lb.capacity > lb.size {
 		// loop around entire slice from here
 		composeSlice := append(lb.buffer[lb.pointer:], lb.buffer[0:lb.pointer]...)
 		trimmedSlice := trimSlice(lb.logger, composeSlice, lb.maxTokens)
-		lb.logger.Debugf("Dump (Max capacity): %s", stringify(trimmedSlice))
+		lb.logger.Debugf("Dump (Max capacity): %s", parser.Stringify(trimmedSlice))
 		return trimmedSlice
 	}
 	// TODO: Avoid special case
 	if lb.pointer == 0 && lb.capacity > 0 {
 		// Buffer is full and pointer wrapped around
 		trimmedSlice := trimSlice(lb.logger, lb.buffer, lb.maxTokens)
-		lb.logger.Debugf("Dump: %s", stringify(trimmedSlice))
+		lb.logger.Debugf("Dump: %s", parser.Stringify(trimmedSlice))
 		return trimmedSlice
 	}
 	trimmedSlice := trimSlice(lb.logger, lb.buffer[0:lb.pointer], lb.maxTokens)
-	lb.logger.Debugf("Dump: %s", stringify(trimmedSlice))
+	lb.logger.Debugf("Dump: %s", parser.Stringify(trimmedSlice))
 	return trimmedSlice
 }
 
-func (lb *logBuffer) Clear() {
+func (lb *LogBuffer) Clear() {
 	lb.pointer = 0
 	lb.capacity = 0
-	lb.buffer = make([]logEntry, lb.size, lb.size)
+	lb.buffer = make([]parser.LogEntry, lb.size, lb.size)
 }
 
-func (lb logBuffer) String() string {
+func (lb LogBuffer) String() string {
 	return fmt.Sprintf("%v", lb.Dump())
 }
 
-func trimSlice(log *zap.SugaredLogger, entries []logEntry, maxTokens int) []logEntry {
+func trimSlice(log *zap.SugaredLogger, entries []parser.LogEntry, maxTokens int) []parser.LogEntry {
 	tokens := 0
 	// Go from most recent logs into oldest logs
 	var i int

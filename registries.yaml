@@ -1,0 +1,13 @@
+apiVersion: k3d.io/v1alpha3
+kind: Simple
+name: registry.localhost
+servers: 1
+agents: 2
+registries:
+  create: 
+    name: registry.localhost
+  config: |
+    mirrors:
+      "localhost:5000":
+        endpoint:
+          - http://k3d-registry.localhost:5000

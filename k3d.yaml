@@ -1,0 +1,2 @@
+apiVersion: k3d.io/v1alpha4
+kind: Simple
