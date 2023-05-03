@@ -1,4 +1,4 @@
-package main
+package diagnose
 
 import (
 	"context"
@@ -11,11 +11,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/config"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/parser"
 )
 
-type handler func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error
+type Handler func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose parser.LogEntry, logContext []parser.LogEntry) error
 
-func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+func HandleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose parser.LogEntry, logContext []parser.LogEntry) error {
 	err := backoff.Retry(func() error {
 		// create file and write to it
 		errorLocation := fileName + ":" + strconv.Itoa(entryToDiagnose.LineNo)
@@ -29,19 +32,19 @@ func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model st
 		if err != nil {
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}
-		log.Infof("Prompt: %s", basePrompt)
-		_, err = f.WriteString(fmt.Sprintf("BASE PROMPT:\n%s\n\n", basePrompt))
+		log.Infof("Prompt: %s", config.BasePrompt)
+		_, err = f.WriteString(fmt.Sprintf("BASE PROMPT:\n%s\n\n", config.BasePrompt))
 		if err != nil {
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}
 
-		context := stringify(logContext)
+		context := parser.Stringify(logContext)
 		log.Infof("Context: %s", context)
 		_, err = f.WriteString(fmt.Sprintf("CONTEXT:\n%s\n\n", context))
 		if err != nil {
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}
-		suggestion, err := suggestion(model, apiKey, basePrompt, context)
+		suggestion, err := suggestion(model, apiKey, config.BasePrompt, context)
 		if err != nil {
 			return fmt.Errorf("error diagnosing using the openai API: %w", err)
 		}
@@ -68,7 +71,7 @@ func handleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model st
 }
 
 func suggestion(model, key, basePrompt, errorMsg string) (string, error) {
-	prompt := strings.Replace(basePrompt, errorPlaceholder, errorMsg, 1)
+	prompt := strings.Replace(basePrompt, config.ErrorPlaceholder, errorMsg, 1)
 	client := openai.NewClient(key)
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
@@ -99,12 +102,4 @@ func safeString(s string) string {
 		result = s[0:200]
 	}
 	return filepath.Clean(result)
-}
-
-func stringify(entries []logEntry) string {
-	var result string
-	for _, entry := range entries {
-		result += entry.Text + "\n"
-	}
-	return result
 }

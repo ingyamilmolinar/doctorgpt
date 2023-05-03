@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent 
+  labels:
+    app: agent 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent 
+  template:
+    metadata:
+      labels:
+        app: agent
+    spec:
+      imagePullSecrets:
+      - name: registry-creds
+      containers:
+      - name: agent
+        image: k3d-registry.localhost:5000/chatgpt:agent
+        imagePullPolicy: Always
+        command: ["/bin/sh", "-c"]
+        args: ["/usr/bin/agent --logfile /linux.log --outdir /agent-errors --configfile /config.yaml --debug false"]
+        env:
+        - name: OPENAI_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-key
+              key: key

@@ -1,15 +1,17 @@
-package main
+package parser
 
 import (
 	"fmt"
 	"go.uber.org/zap"
 	"regexp"
 	"strconv"
+
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/config"
 )
 
 // Struct representing a single log entry (message can be a multi-line string)
-type logEntry struct {
-	Parser    *parser
+type LogEntry struct {
+	Parser    *Parser
 	Triggered bool
 	Filtered  bool
 	Excluded  bool
@@ -21,49 +23,49 @@ type logEntry struct {
 }
 
 // Parse a log line into a LogEntry object
-func parseLogEntry(log *zap.SugaredLogger, parsers []parser, line string, lineNum int) (logEntry, int, error) {
-	var entry logEntry
+func ParseLogEntry(log *zap.SugaredLogger, parsers []Parser, line string, lineNum int) (LogEntry, int, error) {
+	var entry LogEntry
 	var err error
 	for i, parser := range parsers {
 		entry, err = parser.Parse(log, line, lineNum)
 		if err == nil {
-			log.Debugf("MATCHED: i (%d): Regex (%s), Line (%s)", i, parser.regex, line)
+			log.Debugf("MATCHED: i (%d): Regex (%s), Line (%s)", i, parser.Regex, line)
 			if entry.Filtered {
-				log.Debugf("FILTERED: i (%d): Filters (%v), Line (%s)", i, parser.filters, line)
+				log.Debugf("FILTERED: i (%d): Filters (%v), Line (%s)", i, parser.Filters, line)
 			} else {
-				log.Debugf("NOT FILTERED: i (%d): Filters (%v), Line (%s)", i, parser.filters, line)
+				log.Debugf("NOT FILTERED: i (%d): Filters (%v), Line (%s)", i, parser.Filters, line)
 			}
 			if entry.Triggered {
-				log.Debugf("TRIGGERED: i (%d): Triggers (%v), Line (%s)", i, parser.triggers, line)
+				log.Debugf("TRIGGERED: i (%d): Triggers (%v), Line (%s)", i, parser.Triggers, line)
 			} else {
-				log.Debugf("NOT TRIGGERED: i (%d): Triggers (%v), Line (%s)", i, parser.triggers, line)
+				log.Debugf("NOT TRIGGERED: i (%d): Triggers (%v), Line (%s)", i, parser.Triggers, line)
 			}
 			if entry.Excluded {
-				log.Debugf("EXCLUDED: i (%d): Excludes (%v), Line (%s)", i, parser.excludes, line)
+				log.Debugf("EXCLUDED: i (%d): Excludes (%v), Line (%s)", i, parser.Excludes, line)
 			} else {
-				log.Debugf("NOT EXCLUDED: i (%d): Excludes (%v), Line (%s)", i, parser.excludes, line)
+				log.Debugf("NOT EXCLUDED: i (%d): Excludes (%v), Line (%s)", i, parser.Excludes, line)
 			}
 			return entry, i, nil
 		}
 		log.Debugf("Not matched: %v", err)
 	}
-	return logEntry{}, 0, fmt.Errorf("No parser found for line (%s)", line)
+	return LogEntry{}, 0, fmt.Errorf("No parser found for line (%s)", line)
 }
 
 // TODO: Support parsing structured logging
-type parser struct {
-	regex     string
-	re        regexp.Regexp
-	variables []string
-	triggers  []Matcher
-	filters   []Matcher
-	excludes  []Matcher
+type Parser struct {
+	Regex     string
+	Re        regexp.Regexp
+	Variables []string
+	Triggers  []Matcher
+	Filters   []Matcher
+	Excludes  []Matcher
 }
 
-func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex, excludesRegex []variableMatcher) (parser, error) {
+func NewParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex, excludesRegex []config.VariableMatcher) (Parser, error) {
 	re, err := regexp.Compile(regex)
 	if err != nil {
-		return parser{}, err
+		return Parser{}, err
 	}
 
 	var variables []string
@@ -87,11 +89,11 @@ func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex
 		// check if variable is part of variable list
 		_, ok := variableSet[variable]
 		if !ok {
-			return parser{}, fmt.Errorf("variable (%s) in filter is not a regex variable", variable)
+			return Parser{}, fmt.Errorf("variable (%s) in filter is not a regex variable", variable)
 		}
 		filter, err := newMatcher(log, variable, regex)
 		if err != nil {
-			return parser{}, err
+			return Parser{}, err
 		}
 		filters = append(filters, filter)
 	}
@@ -103,11 +105,11 @@ func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex
 		// check if variable is part of variable list
 		_, ok := variableSet[variable]
 		if !ok {
-			return parser{}, fmt.Errorf("variable (%s) in trigger is not a regex variable", variable)
+			return Parser{}, fmt.Errorf("variable (%s) in trigger is not a regex variable", variable)
 		}
 		trigger, err := newMatcher(log, variable, regex)
 		if err != nil {
-			return parser{}, err
+			return Parser{}, err
 		}
 		triggers = append(triggers, trigger)
 	}
@@ -119,11 +121,11 @@ func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex
 		// check if variable is part of variable list
 		_, ok := variableSet[variable]
 		if !ok {
-			return parser{}, fmt.Errorf("variable (%s) in exclude is not a regex variable", variable)
+			return Parser{}, fmt.Errorf("variable (%s) in exclude is not a regex variable", variable)
 		}
 		exclude, err := newMatcher(log, variable, regex)
 		if err != nil {
-			return parser{}, err
+			return Parser{}, err
 		}
 		excludes = append(excludes, exclude)
 	}
@@ -133,25 +135,25 @@ func newParser(log *zap.SugaredLogger, regex string, filtersRegex, triggersRegex
 	log.Debugf("Filters: (%v)", filters)
 	log.Debugf("Triggers: (%v)", triggers)
 	log.Debugf("Excludes: (%v)", excludes)
-	return parser{
-		regex:     regex,
-		re:        *re,
-		variables: variables,
-		filters:   filters,
-		triggers:  triggers,
-		excludes:  excludes,
+	return Parser{
+		Regex:     regex,
+		Re:        *re,
+		Variables: variables,
+		Filters:   filters,
+		Triggers:  triggers,
+		Excludes:  excludes,
 	}, nil
 }
 
-func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntry, error) {
-	matches := p.re.FindStringSubmatch(line)
+func (p Parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (LogEntry, error) {
+	matches := p.Re.FindStringSubmatch(line)
 	if len(matches) == 0 {
-		log.Debugf("Parser (%s) did not match line (%s)", p.regex, line)
-		return logEntry{}, fmt.Errorf("parser with regex (%s) did not match line (%s)", p.regex, line)
+		log.Debugf("Parser (%s) did not match line (%s)", p.Regex, line)
+		return LogEntry{}, fmt.Errorf("parser with regex (%s) did not match line (%s)", p.Regex, line)
 	}
 
 	result := make(map[string]string)
-	for i, variable := range p.re.SubexpNames() {
+	for i, variable := range p.Re.SubexpNames() {
 		if i == 0 || variable == "" {
 			continue
 		}
@@ -163,7 +165,7 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 	result["LINENO"] = strconv.Itoa(lineNum)
 	log.Debugf("Variable: (%s), Match: (%s)", "LINENO", strconv.Itoa(lineNum))
 
-	entry := logEntry{
+	entry := LogEntry{
 		Parser:    &p,
 		Text:      line,
 		LineNo:    lineNum,
@@ -172,7 +174,7 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 
 	// Set Filtered
 	// TODO: Support boolean primitives
-	for _, filter := range p.filters {
+	for _, filter := range p.Filters {
 		log.Debugf("Matching filter: (%v)", filter)
 		if filter.Match(entry) {
 			log.Debugf("Matched filter: (%v)", filter)
@@ -183,7 +185,7 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 
 	// Set Triggered
 	// TODO: Support boolean primitives
-	for _, trigger := range p.triggers {
+	for _, trigger := range p.Triggers {
 		log.Debugf("Matching trigger: (%v)", trigger)
 		if trigger.Match(entry) {
 			log.Debugf("Matched trigger: (%v)", trigger)
@@ -194,7 +196,7 @@ func (p parser) Parse(log *zap.SugaredLogger, line string, lineNum int) (logEntr
 
 	// Set excluded
 	// TODO: Support boolean primitives
-	for _, exclude := range p.excludes {
+	for _, exclude := range p.Excludes {
 		log.Debugf("Matching exclude: (%v)", exclude)
 		if exclude.Match(entry) {
 			log.Debugf("Matched exclude: (%v)", exclude)
@@ -214,7 +216,7 @@ type matcher struct {
 }
 
 type Matcher interface {
-	Match(entry logEntry) bool
+	Match(entry LogEntry) bool
 }
 
 func newMatcher(log *zap.SugaredLogger, variable, regex string) (Matcher, error) {
@@ -229,7 +231,7 @@ func newMatcher(log *zap.SugaredLogger, variable, regex string) (Matcher, error)
 	}, nil
 }
 
-func (m matcher) Match(entry logEntry) bool {
+func (m matcher) Match(entry LogEntry) bool {
 	// Decode entry into json field map
 	m.log.Debugf("Variable (%s) map (%v)", m.variable, entry.Variables)
 	value, ok := entry.Variables[m.variable]
@@ -239,4 +241,12 @@ func (m matcher) Match(entry logEntry) bool {
 	}
 	m.log.Debugf("Trying to match regex (%s)", m.re.String())
 	return m.re.MatchString(value)
+}
+
+func Stringify(entries []LogEntry) string {
+	var result string
+	for _, entry := range entries {
+		result += entry.Text + "\n"
+	}
+	return result
 }

@@ -6,19 +6,23 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/common"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/config"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/parser"
 )
 
 func TestAndroidParser(t *testing.T) {
-	androidParser, err := newParser(logger.Sugar(), "^(?P<DATE>\\d{2}-\\d{2})\\s(?P<TIME>\\d{2}:\\d{2}:\\d{2}.\\d{3})\\s+(?P<PID>\\d+)\\s+(?P<TID>\\d+)\\s+(?P<LEVEL>[A-Z])\\s+(?P<TAG>[^:]+):\\s(?P<MESSAGE>.+)$",
-		[]variableMatcher{}, []variableMatcher{
+	androidParser, err := parser.NewParser(logger.Sugar(), "^(?P<DATE>\\d{2}-\\d{2})\\s(?P<TIME>\\d{2}:\\d{2}:\\d{2}.\\d{3})\\s+(?P<PID>\\d+)\\s+(?P<TID>\\d+)\\s+(?P<LEVEL>[A-Z])\\s+(?P<TAG>[^:]+):\\s(?P<MESSAGE>.+)$",
+		[]config.VariableMatcher{}, []config.VariableMatcher{
 			{
 				Variable: "LINENO",
 				Regex:    "2000",
 			},
-		}, []variableMatcher{})
+		}, []config.VariableMatcher{})
 	require.NoError(t, err)
 
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &androidParser,
 		Filtered:  false,
 		Triggered: true,
@@ -41,15 +45,15 @@ func TestAndroidParser(t *testing.T) {
 }
 
 func TestApacheParser(t *testing.T) {
-	apacheParser, err := newParser(logger.Sugar(), "^\\[(?P<DATE>\\w{3} \\w{3} \\d{2} \\d{2}:\\d{2}:\\d{2} \\d{4})\\] \\[(?P<SEVERITY>\\w+)\\] (?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+	apacheParser, err := parser.NewParser(logger.Sugar(), "^\\[(?P<DATE>\\w{3} \\w{3} \\d{2} \\d{2}:\\d{2}:\\d{2} \\d{4})\\] \\[(?P<SEVERITY>\\w+)\\] (?P<MESSAGE>.*)$", []config.VariableMatcher{}, []config.VariableMatcher{
 		{
 			Variable: "LINENO",
 			Regex:    "2000",
 		},
-	}, []variableMatcher{})
+	}, []config.VariableMatcher{})
 	require.NoError(t, err)
 
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &apacheParser,
 		Filtered:  false,
 		Triggered: true,
@@ -68,16 +72,16 @@ func TestApacheParser(t *testing.T) {
 }
 
 func TestHDFSParser(t *testing.T) {
-	hdfsParser, err := newParser(logger.Sugar(), "^(?P<DATE>\\d{6})\\s(?P<TIME>\\d{6})\\s(?P<PID>\\d+)\\s(?P<LEVEL>\\w+)\\s(?P<CLASS>[^\\s]+):\\s(?P<MESSAGE>.*)$",
-		[]variableMatcher{}, []variableMatcher{
+	hdfsParser, err := parser.NewParser(logger.Sugar(), "^(?P<DATE>\\d{6})\\s(?P<TIME>\\d{6})\\s(?P<PID>\\d+)\\s(?P<LEVEL>\\w+)\\s(?P<CLASS>[^\\s]+):\\s(?P<MESSAGE>.*)$",
+		[]config.VariableMatcher{}, []config.VariableMatcher{
 			{
 				Variable: "LINENO",
 				Regex:    "2000",
 			},
-		}, []variableMatcher{})
+		}, []config.VariableMatcher{})
 	require.NoError(t, err)
 
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &hdfsParser,
 		Filtered:  false,
 		Triggered: true,
@@ -99,16 +103,16 @@ func TestHDFSParser(t *testing.T) {
 }
 
 func TestHadoopParser(t *testing.T) {
-	hadoopParser, err := newParser(logger.Sugar(), "^(?P<TIMESTAMP>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3})\\s+(?P<LEVEL>[A-Z]+)\\s+\\[(?P<THREAD>[^\\]]+)\\] (?P<CLASS>[^:]+): (?P<MESSAGE>.+)$",
-		[]variableMatcher{}, []variableMatcher{
+	hadoopParser, err := parser.NewParser(logger.Sugar(), "^(?P<TIMESTAMP>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2},\\d{3})\\s+(?P<LEVEL>[A-Z]+)\\s+\\[(?P<THREAD>[^\\]]+)\\] (?P<CLASS>[^:]+): (?P<MESSAGE>.+)$",
+		[]config.VariableMatcher{}, []config.VariableMatcher{
 			{
 				Variable: "LINENO",
 				Regex:    "2000",
 			},
-		}, []variableMatcher{})
+		}, []config.VariableMatcher{})
 	require.NoError(t, err)
 
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &hadoopParser,
 		Filtered:  false,
 		Triggered: true,
@@ -129,16 +133,16 @@ func TestHadoopParser(t *testing.T) {
 }
 
 func TestLinuxParser(t *testing.T) {
-	linuxParser, err := newParser(logger.Sugar(), "^(?P<DATE>[A-Z][a-z]{2}\\s+\\d{1,2})\\s+(?P<TIME>\\d{2}:\\d{2}:\\d{2})\\s+(?P<HOST>\\S+)\\s+(?P<PROCESS>[^:]+)(\\[(?P<PID>\\d+)\\])?:\\s+(?P<MESSAGE>.+)$",
-		[]variableMatcher{}, []variableMatcher{
+	linuxParser, err := parser.NewParser(logger.Sugar(), "^(?P<DATE>[A-Z][a-z]{2}\\s+\\d{1,2})\\s+(?P<TIME>\\d{2}:\\d{2}:\\d{2})\\s+(?P<HOST>\\S+)\\s+(?P<PROCESS>[^:]+)(\\[(?P<PID>\\d+)\\])?:\\s+(?P<MESSAGE>.+)$",
+		[]config.VariableMatcher{}, []config.VariableMatcher{
 			{
 				Variable: "LINENO",
 				Regex:    "2000",
 			},
-		}, []variableMatcher{})
+		}, []config.VariableMatcher{})
 	require.NoError(t, err)
 
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &linuxParser,
 		Filtered:  false,
 		Triggered: true,
@@ -160,20 +164,20 @@ func TestLinuxParser(t *testing.T) {
 }
 
 func TestMacParser(t *testing.T) {
-	macParser, err := newParser(logger.Sugar(),
+	macParser, err := parser.NewParser(logger.Sugar(),
 		"^(?P<MONTH>[A-Z][a-z]{2})\\s+(?P<DAY>\\d{1,2})\\s(?P<TIME>(?:\\d{2}:){2}\\d{2})\\s(?P<HOST>[^\\s]+)\\s(?P<PROCESS>[^\\[]+)\\[(?P<PID>\\d+)\\]:?(?:\\s\\((?P<PID2>\\d+)\\))?:?\\s(?P<MESSAGE>.*)$",
-		[]variableMatcher{},
-		[]variableMatcher{
+		[]config.VariableMatcher{},
+		[]config.VariableMatcher{
 			{
 				Variable: "LINENO",
 				Regex:    "2000",
 			},
 		},
-		[]variableMatcher{},
+		[]config.VariableMatcher{},
 	)
 	require.NoError(t, err)
 
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &macParser,
 		Filtered:  false,
 		Triggered: true,
@@ -197,20 +201,20 @@ func TestMacParser(t *testing.T) {
 }
 
 func TestSparkParser(t *testing.T) {
-	sparkParser, err := newParser(logger.Sugar(),
+	sparkParser, err := parser.NewParser(logger.Sugar(),
 		"^(?P<DATE>\\d{2}\\/\\d{2}\\/\\d{2}) (?P<TIME>\\d{2}:\\d{2}:\\d{2}) (?P<LEVEL>[A-Z]+) (?P<CLASS>[a-zA-Z0-9\\.]+): (?P<MESSAGE>.+)$",
-		[]variableMatcher{},
-		[]variableMatcher{
+		[]config.VariableMatcher{},
+		[]config.VariableMatcher{
 			{
 				Variable: "LINENO",
 				Regex:    "2000",
 			},
 		},
-		[]variableMatcher{},
+		[]config.VariableMatcher{},
 	)
 	require.NoError(t, err)
 
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &sparkParser,
 		Filtered:  false,
 		Triggered: true,
@@ -231,20 +235,20 @@ func TestSparkParser(t *testing.T) {
 }
 
 func TestWindowsParser(t *testing.T) {
-	windowsParser, err := newParser(logger.Sugar(),
+	windowsParser, err := parser.NewParser(logger.Sugar(),
 		"^(?P<DATE>\\d{4}-\\d{2}-\\d{2}) (?P<TIME>\\d{2}:\\d{2}:\\d{2}),\\s+(?P<LEVEL>[A-Z][a-z]+)\\s+(?P<CLASS>[A-Za-z]+)\\s+(?P<MESSAGE>.*)$",
-		[]variableMatcher{},
-		[]variableMatcher{
+		[]config.VariableMatcher{},
+		[]config.VariableMatcher{
 			{
 				Variable: "LINENO",
 				Regex:    "2000",
 			},
 		},
-		[]variableMatcher{},
+		[]config.VariableMatcher{},
 	)
 	require.NoError(t, err)
 
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &windowsParser,
 		Filtered:  false,
 		Triggered: true,
@@ -264,41 +268,26 @@ func TestWindowsParser(t *testing.T) {
 	testParser(t, windowsParser, expectedEntry, 2000, "testlogs/Windows_2k.log")
 }
 
-func testParser(t *testing.T, mainParser parser, expectedLastEntry logEntry, logLines int, filePath string) {
+func testParser(t *testing.T, mainParser parser.Parser, expectedLastEntry parser.LogEntry, logLines int, filePath string) {
 	var wg sync.WaitGroup
 	// create validation function
-	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose parser.LogEntry, logContext []parser.LogEntry) error {
 		defer wg.Done()
 		require.Equal(t, expectedLastEntry, entryToDiagnose)
 		require.Equal(t, logLines, len(logContext))
 		// Verify that all entries in the context were parsed with the first parser
 		for _, entry := range logContext {
-			require.Equal(t, mainParser.regex, entry.Parser.regex, "Line (%d) was not parsed correctly", entry.LineNo)
+			require.Equal(t, mainParser.Regex, entry.Parser.Regex, "Line (%d) was not parsed correctly", entry.LineNo)
 		}
 		return nil
 	}
 	// Monitor log (will finish and not tail)
 	wg.Add(1)
 	go func() {
-		monitorLogLoop(logger.Sugar(), filePath, "", "", "", logLines, 999999, []parser{
+		MonitorLogLoop(logger.Sugar(), filePath, "", "", "", logLines, 999999, []parser.Parser{
 			mainParser,
 			allLineParser,
 		}, handler, 100*time.Millisecond, false)
 	}()
-	waitWithTimeout(t, &wg, 2*time.Second)
-}
-
-func waitWithTimeout(t *testing.T, wg *sync.WaitGroup, timeout time.Duration) {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return
-	case <-time.After(timeout):
-		t.Errorf("Test timeout after (%s)", timeout)
-		return
-	}
+	common.WaitWithTimeout(t, &wg, 2*time.Second)
 }

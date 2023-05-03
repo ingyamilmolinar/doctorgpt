@@ -8,27 +8,31 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/common"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/config"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/parser"
 )
 
 var logger, _ = zap.NewDevelopment()
 
-var nodeLogParser, _ = newParser(logger.Sugar(), "^\\[(?P<LEVEL>\\w+)\\]\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+var nodeLogParser, _ = parser.NewParser(logger.Sugar(), "^\\[(?P<LEVEL>\\w+)\\]\\s+(?P<MESSAGE>.*)$", []config.VariableMatcher{}, []config.VariableMatcher{
 	{
 		Variable: "LEVEL",
 		Regex:    "ERROR",
 	},
-}, []variableMatcher{})
+}, []config.VariableMatcher{})
 
-var allLineParser, _ = newParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{}, []variableMatcher{})
+var allLineParser, _ = parser.NewParser(logger.Sugar(), "^(?P<MESSAGE>.*)$", []config.VariableMatcher{}, []config.VariableMatcher{}, []config.VariableMatcher{})
 
 type expectedEntry struct {
-	logEntry      logEntry
+	logEntry      parser.LogEntry
 	parserMatched int
 }
 
 var expectedEntries = []expectedEntry{
 	{
-		logEntry: logEntry{
+		logEntry: parser.LogEntry{
 			Parser:    &allLineParser,
 			Triggered: false,
 			LineNo:    1,
@@ -41,7 +45,7 @@ var expectedEntries = []expectedEntry{
 		parserMatched: 1,
 	},
 	{
-		logEntry: logEntry{
+		logEntry: parser.LogEntry{
 			Parser:    &allLineParser,
 			Triggered: false,
 			LineNo:    2,
@@ -54,7 +58,7 @@ var expectedEntries = []expectedEntry{
 		parserMatched: 1,
 	},
 	{
-		logEntry: logEntry{
+		logEntry: parser.LogEntry{
 			Parser:    &nodeLogParser,
 			Triggered: false,
 			LineNo:    3,
@@ -68,7 +72,7 @@ var expectedEntries = []expectedEntry{
 		parserMatched: 0,
 	},
 	{
-		logEntry: logEntry{
+		logEntry: parser.LogEntry{
 			Parser:    &nodeLogParser,
 			Triggered: true,
 			LineNo:    4,
@@ -84,7 +88,7 @@ var expectedEntries = []expectedEntry{
 }
 
 func TestParsers(t *testing.T) {
-	parsers := []parser{
+	parsers := []parser.Parser{
 		nodeLogParser,
 		allLineParser,
 	}
@@ -99,7 +103,7 @@ func TestParsers(t *testing.T) {
 
 	i := 0
 	for line := range f.Lines {
-		entry, parserMatched, err := parseLogEntry(logger.Sugar(), parsers, line.Text, i+1)
+		entry, parserMatched, err := parser.ParseLogEntry(logger.Sugar(), parsers, line.Text, i+1)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedEntries[i].logEntry, entry)
 		assert.Equal(t, expectedEntries[i].parserMatched, parserMatched)
@@ -107,16 +111,16 @@ func TestParsers(t *testing.T) {
 	}
 }
 
-var dropboxParser, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+var dropboxParser, _ = parser.NewParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []config.VariableMatcher{}, []config.VariableMatcher{
 	{
 		Variable: "LEVEL",
 		Regex:    "ERROR",
 	},
-}, []variableMatcher{})
+}, []config.VariableMatcher{})
 
 func TestDropboxLogExample(t *testing.T) {
 	var wg sync.WaitGroup
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &dropboxParser,
 		Triggered: true,
 		Text:      "[1217/201832.950515:ERROR:cache_util.cc(140)] Unable to move cache folder GPUCache to old_GPUCache_000",
@@ -127,7 +131,7 @@ func TestDropboxLogExample(t *testing.T) {
 			"MESSAGE": "Unable to move cache folder GPUCache to old_GPUCache_000",
 		},
 	}
-	expectedContext := []logEntry{
+	expectedContext := []parser.LogEntry{
 		{
 			Parser:    &dropboxParser,
 			Triggered: false,
@@ -164,7 +168,7 @@ func TestDropboxLogExample(t *testing.T) {
 		},
 	}
 	// create validation function
-	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose parser.LogEntry, logContext []parser.LogEntry) error {
 		defer wg.Done()
 		require.Equal(t, expectedEntry, entryToDiagnose)
 		require.Equal(t, expectedContext, logContext)
@@ -173,31 +177,31 @@ func TestDropboxLogExample(t *testing.T) {
 	// Send process for a spin.
 	wg.Add(1)
 	go func(t *testing.T) {
-		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
+		MonitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser.Parser{
 			dropboxParser,
 			allLineParser,
 		}, handler, 100*time.Millisecond, true)
 	}(t)
 	// Wait until handler executes
-	waitWithTimeout(t, &wg, 1*time.Second)
+	common.WaitWithTimeout(t, &wg, 1*time.Second)
 }
 
-var dropboxParserWithFilters, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []variableMatcher{
+var dropboxParserWithFilters, _ = parser.NewParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []config.VariableMatcher{
 	{
 		// We will skip the first error lines
 		Variable: "MESSAGE",
 		Regex:    "Unable",
 	},
-}, []variableMatcher{
+}, []config.VariableMatcher{
 	{
 		Variable: "LEVEL",
 		Regex:    "ERROR",
 	},
-}, []variableMatcher{})
+}, []config.VariableMatcher{})
 
 func TestDropboxLogExampleWithFilters(t *testing.T) {
 	var wg sync.WaitGroup
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &dropboxParserWithFilters,
 		Filtered:  false,
 		Triggered: true,
@@ -209,7 +213,7 @@ func TestDropboxLogExampleWithFilters(t *testing.T) {
 			"MESSAGE": "Shader Cache Creation failed: -2",
 		},
 	}
-	expectedContext := []logEntry{
+	expectedContext := []parser.LogEntry{
 		{
 			Parser:    &dropboxParserWithFilters,
 			Filtered:  false,
@@ -249,7 +253,7 @@ func TestDropboxLogExampleWithFilters(t *testing.T) {
 		expectedEntry,
 	}
 	// create validation function
-	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose parser.LogEntry, logContext []parser.LogEntry) error {
 		defer wg.Done()
 		require.Equal(t, expectedEntry, entryToDiagnose)
 		require.Equal(t, expectedContext, logContext)
@@ -258,21 +262,21 @@ func TestDropboxLogExampleWithFilters(t *testing.T) {
 	// Send process for a spin.
 	wg.Add(1)
 	go func(t *testing.T) {
-		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
+		MonitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser.Parser{
 			dropboxParserWithFilters,
 			allLineParser,
 		}, handler, 100*time.Millisecond, true)
 	}(t)
 	// Wait until handler executes
-	waitWithTimeout(t, &wg, 1*time.Second)
+	common.WaitWithTimeout(t, &wg, 1*time.Second)
 }
 
-var dropboxParserWithExcludes, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+var dropboxParserWithExcludes, _ = parser.NewParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{6}\\.\\d{6}):(?P<LEVEL>\\w+):([\\w\\.\\_]+)\\(\\d+\\)\\]\\s+(?P<MESSAGE>.*)$", []config.VariableMatcher{}, []config.VariableMatcher{
 	{
 		Variable: "LEVEL",
 		Regex:    "ERROR",
 	},
-}, []variableMatcher{
+}, []config.VariableMatcher{
 	{
 		Variable: "LEVEL",
 		Regex:    "WARNING",
@@ -281,7 +285,7 @@ var dropboxParserWithExcludes, _ = newParser(logger.Sugar(), "^\\[(\\d{4}\\/\\d{
 
 func TestDropboxLogExampleWithExcludes(t *testing.T) {
 	var wg sync.WaitGroup
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &dropboxParserWithExcludes,
 		Triggered: true,
 		Excluded:  false,
@@ -293,7 +297,7 @@ func TestDropboxLogExampleWithExcludes(t *testing.T) {
 			"MESSAGE": "Unable to move cache folder GPUCache to old_GPUCache_000",
 		},
 	}
-	expectedContext := []logEntry{
+	expectedContext := []parser.LogEntry{
 		expectedEntry,
 		{
 			Parser:    &dropboxParserWithExcludes,
@@ -321,7 +325,7 @@ func TestDropboxLogExampleWithExcludes(t *testing.T) {
 		},
 	}
 	// create validation function
-	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose parser.LogEntry, logContext []parser.LogEntry) error {
 		defer wg.Done()
 		require.Equal(t, expectedEntry, entryToDiagnose)
 		require.Equal(t, expectedContext, logContext)
@@ -330,17 +334,17 @@ func TestDropboxLogExampleWithExcludes(t *testing.T) {
 	// Send process for a spin.
 	wg.Add(1)
 	go func(t *testing.T) {
-		monitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser{
+		MonitorLogLoop(logger.Sugar(), "testlogs/dropbox.log", "", "", "", 10, 8000, []parser.Parser{
 			dropboxParserWithExcludes,
 			allLineParser,
 		}, handler, 100*time.Millisecond, true)
 	}(t)
 	// Wait until handler executes
-	waitWithTimeout(t, &wg, 1*time.Second)
+	common.WaitWithTimeout(t, &wg, 1*time.Second)
 }
 
 // We do not match the hash in a variable on purpose
-var photosParser, _ = newParser(logger.Sugar(), "^(?P<DATE>[^ ]+)\\s+(?P<TIME>[^ ]+)\\s+[^ ]+\\s+(?P<LEVEL>[^ ]+)\\s+(?P<PID>[^ ]+)\\s+(?P<PROCNAME>[^ ]+)\\s+(?P<FILEANDLINENO>[^ ]+)\\s+(?P<MESSAGE>.*)$", []variableMatcher{}, []variableMatcher{
+var photosParser, _ = parser.NewParser(logger.Sugar(), "^(?P<DATE>[^ ]+)\\s+(?P<TIME>[^ ]+)\\s+[^ ]+\\s+(?P<LEVEL>[^ ]+)\\s+(?P<PID>[^ ]+)\\s+(?P<PROCNAME>[^ ]+)\\s+(?P<FILEANDLINENO>[^ ]+)\\s+(?P<MESSAGE>.*)$", []config.VariableMatcher{}, []config.VariableMatcher{
 	{
 		Variable: "MESSAGE",
 		Regex:    "error", // will match line 2
@@ -349,11 +353,11 @@ var photosParser, _ = newParser(logger.Sugar(), "^(?P<DATE>[^ ]+)\\s+(?P<TIME>[^
 		Variable: "MESSAGE",
 		Regex:    "Error:", // will  match lines 4-5
 	},
-}, []variableMatcher{})
+}, []config.VariableMatcher{})
 
 func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
 	var wg sync.WaitGroup
-	expectedEntry := logEntry{
+	expectedEntry := parser.LogEntry{
 		Parser:    &photosParser,
 		Filtered:  false,
 		Triggered: true,
@@ -370,7 +374,7 @@ func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
 			"MESSAGE":       "Creating sqlite error indicator file",
 		},
 	}
-	expectedContext := []logEntry{
+	expectedContext := []parser.LogEntry{
 		{
 			Parser:    &photosParser,
 			Filtered:  false,
@@ -391,7 +395,7 @@ func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
 		expectedEntry,
 	}
 
-	expectedEntry2 := logEntry{
+	expectedEntry2 := parser.LogEntry{
 		Parser:    &photosParser,
 		Filtered:  false,
 		Triggered: true,
@@ -408,7 +412,7 @@ func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
 			"MESSAGE":       "Failed updating attributes. Error: Error Domain=com.apple.photos.error Code=41004 \"Missing metadata for asset E59700B1-CF52-47FD-86B5-6835F995AAF8. File not on disk\" UserInfo={NSLocalizedDescription=Missing metadata for asset E59700B1-CF52-47FD-86B5-6835F995AAF8. File not on disk}",
 		},
 	}
-	expectedContext2 := []logEntry{
+	expectedContext2 := []parser.LogEntry{
 		{
 			Parser:    &photosParser,
 			Filtered:  false,
@@ -431,7 +435,7 @@ func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
 	// create validation function
 	// we expect the logs to produce two rounds of error diagnosis
 	round := 1
-	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose logEntry, logContext []logEntry) error {
+	handler := func(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, entryToDiagnose parser.LogEntry, logContext []parser.LogEntry) error {
 		defer wg.Done()
 		if round == 1 {
 			require.Equal(t, expectedEntry, entryToDiagnose)
@@ -446,11 +450,11 @@ func TestPhotosLogExampleMultipleMatchers(t *testing.T) {
 	// Send process for a spin.
 	wg.Add(2)
 	go func(t *testing.T) {
-		monitorLogLoop(logger.Sugar(), "testlogs/photos.log", "", "", "", 10, 8000, []parser{
+		MonitorLogLoop(logger.Sugar(), "testlogs/photos.log", "", "", "", 10, 8000, []parser.Parser{
 			photosParser,
 			allLineParser,
 		}, handler, 100*time.Millisecond, true)
 	}(t)
 	// Wait until handler executes
-	waitWithTimeout(t, &wg, 1*time.Second)
+	common.WaitWithTimeout(t, &wg, 1*time.Second)
 }

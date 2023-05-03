@@ -1,4 +1,4 @@
-module github.com/ingyamilmolinar/doctorgpt
+module github.com/ingyamilmolinar/doctorgpt/agent
 
 go 1.20
 

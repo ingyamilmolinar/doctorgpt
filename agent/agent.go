@@ -4,19 +4,30 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/hpcloud/tail"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/buffer"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/config"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/diagnose"
+	"github.com/ingyamilmolinar/doctorgpt/agent/internal/parser"
 	"go.uber.org/zap"
 )
 
 func main() {
+	_, err := fmt.Println("Beginning start-up sequence")
+	if err != nil {
+		panic(err)
+	}
+
 	// Parse command-line arguments
 	// TODO: Monitor all logs in a directory
 	logFilePath := flag.String("logfile", "", "path to log file")
 	outputDir := flag.String("outdir", "", "path to output directory")
 	configFilePath := flag.String("configfile", "", "path to config file")
-	debugFlag := flag.Bool("debug", true, "log debug flag")
+	// String instead of bool due to: https://stackoverflow.com/questions/27411691/how-to-pass-boolean-arguments-to-go-flags
+	debugFlag := flag.String("debug", "true", "log debug flag")
 	logBundlingTimeoutInSecs := flag.Int("bundlingtimeoutseconds", 5, "log bundling timeout duration in seconds")
 	bufferSize := flag.Int("buffersize", 100, "max log entries per ring-buffer")
 	maxTokens := flag.Int("maxtokens", 8000, "max tokens for context per API request")
@@ -24,20 +35,50 @@ func main() {
 	flag.Parse()
 
 	// Init logger
-	var err error
 	var logger *zap.Logger
-	if *debugFlag {
-		logger, err = zap.NewDevelopment()
+	var logConfig zap.Config
+	if *debugFlag == "false" {
+		logConfig = zap.Config{
+			Level:            zap.NewAtomicLevelAt(zap.InfoLevel),
+			Development:      false,
+			Encoding:         "json",
+			EncoderConfig:    zap.NewProductionEncoderConfig(),
+			OutputPaths:      []string{"stdout"},
+			ErrorOutputPaths: []string{"stdout"},
+		}
+		fmt.Println("Initializing logger in production mode")
 	} else {
-		logger, err = zap.NewProduction()
+		logConfig = zap.Config{
+			Level:            zap.NewAtomicLevelAt(zap.DebugLevel),
+			Development:      true,
+			Encoding:         "console",
+			EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
+			OutputPaths:      []string{"stdout"},
+			ErrorOutputPaths: []string{"stdout"},
+		}
+		fmt.Println("Initializing logger in debug mode")
 	}
+	logger, err = logConfig.Build()
 	if err != nil {
 		fmt.Printf("Failed to init logger: %v", err)
 		os.Exit(1)
 	}
-	// TODO: Can this cause issues?
 	// TODO: Handle a kill event gracefully
 	defer logger.Sync()
+
+	go func(log *zap.Logger) {
+		flushLoggerTick := time.NewTicker(100 * time.Millisecond)
+		for {
+			select {
+			case <-flushLoggerTick.C:
+				err := logger.Sync()
+				// https://github.com/uber-go/zap/issues/328
+				if err != nil && !strings.Contains(err.Error(), "inappropriate ioctl for device") && !strings.Contains(err.Error(), "invalid argument") {
+					log.Sugar().Debugf("%v\n", err)
+				}
+			}
+		}
+	}(logger)
 	log := logger.Sugar()
 
 	if *logFilePath == "" {
@@ -59,32 +100,32 @@ func main() {
 	}
 
 	// Setup and build parsers
-	parsers, err := setup(log, *configFilePath, *outputDir, fileConfigProvider)
+	parsers, err := setup(log, *configFilePath, *outputDir, config.FileConfigProvider)
 	if err != nil {
-		log.Fatal("Setup failed: %v", err)
+		log.Fatalf("Setup failed: %v", err)
 	}
 
 	// This will effectively never end (it doesn't handle EOF)
 	timeoutDuration := time.Duration(*logBundlingTimeoutInSecs) * time.Second
-	monitorLogLoop(log, *logFilePath, *outputDir, apiKey, *gptModel, *bufferSize, *maxTokens, parsers, handleTrigger, timeoutDuration, true)
+	MonitorLogLoop(log, *logFilePath, *outputDir, apiKey, *gptModel, *bufferSize, *maxTokens, parsers, diagnose.HandleTrigger, timeoutDuration, true)
 }
 
-func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider configProvider) ([]parser, error) {
-	config, err := configProvider(log, configFile)
+func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider config.ConfigProvider) ([]parser.Parser, error) {
+	cfg, err := configProvider(log, configFile)
 	if err != nil {
 		return nil, fmt.Errorf("config provider failed: %w", err)
 	}
-	if config.Prompt != "" {
-		basePrompt = config.Prompt
+	if cfg.Prompt != "" {
+		config.BasePrompt = cfg.Prompt
 	}
 
-	var parsers []parser
-	for _, parser := range config.Parsers {
-		parser, err := newParser(log, parser.Regex, parser.Filters, parser.Triggers, parser.Excludes)
+	var parsers []parser.Parser
+	for _, p := range cfg.Parsers {
+		parser, err := parser.NewParser(log, p.Regex, p.Filters, p.Triggers, p.Excludes)
 		if err != nil {
 			return nil, fmt.Errorf("invalid config file: %w", err)
 		}
-		log.Debugf("Appending parser (%s)", parser.regex)
+		log.Debugf("Appending parser (%s)", parser.Regex)
 		parsers = append(parsers, parser)
 	}
 	log.Infof("Initialized (%d) parsers", len(parsers))
@@ -104,7 +145,7 @@ func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider 
 	return parsers, nil
 }
 
-func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, bufferSize, maxTokens int, parsers []parser, handler handler, timeout time.Duration, follow bool) {
+func MonitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model string, bufferSize, maxTokens int, parsers []parser.Parser, handler diagnose.Handler, timeout time.Duration, follow bool) {
 	// Set up tail object to read log file
 	tailConfig := tail.Config{
 		Follow: follow,
@@ -116,7 +157,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 	}
 
 	// Map of log buffers, keyed by thread ID or routine name
-	logBuffers := make(map[string]*logBuffer)
+	logBuffers := make(map[string]*buffer.LogBuffer)
 
 	// Loop to read new lines from the log file
 	lineNum := 0
@@ -124,7 +165,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 		lineNum++
 	top:
 		// Parse the log entry
-		entry, parserMatched, err := parseLogEntry(log, parsers, line.Text, lineNum)
+		entry, parserMatched, err := parser.ParseLogEntry(log, parsers, line.Text, lineNum)
 		if err != nil {
 			log.Fatalf("Error parsing log entry (%s)", line)
 		}
@@ -140,7 +181,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 
 		// Create a new buffer if necessary
 		if _, ok := logBuffers[key]; !ok {
-			logBuffers[key] = newLogBuffer(log, bufferSize, maxTokens-len(basePrompt))
+			logBuffers[key] = buffer.NewLogBuffer(log, bufferSize, maxTokens-len(config.BasePrompt))
 		}
 
 		// Buffer the log entry
@@ -173,7 +214,7 @@ func monitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 					lineNum++
 					// Parse lines until we hit a known log line that's not the generic one
 					var matched int
-					entry, matched, err = parseLogEntry(log, parsers, l.Text, lineNum)
+					entry, matched, err = parser.ParseLogEntry(log, parsers, l.Text, lineNum)
 					if err != nil {
 						log.Fatalf("Error parsing log entry (%s)", l.Text)
 					}
