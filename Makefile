@@ -2,6 +2,7 @@ k3d-create:
 	$(MAKE) k3d-delete
 	$(MAKE) k3d-registry-create
 	$(MAKE) agent-image-push
+	$(MAKE) producer-image-push
 	k3d cluster create app --config k3d.yaml --registry-config=registries.yaml --registry-use registry.localhost:5000
 	$(MAKE) kube-registry-secret
 	$(MAKE) kube-envvar-secret
@@ -13,6 +14,23 @@ k3d-delete:
 
 k3d-registry-create:
 	k3d registry create registry.localhost -p 5000
+
+producer-build:
+	cd producer ; GOBIN=/usr/local/bin go install "github.com/ingyamilmolinar/doctorgpt/producer" ; cd -
+
+producer-image-build:
+	cd producer ; docker build --progress=plain -f Dockerfile -t producer:latest ../. && cd -
+
+producer-image-push:
+	$(MAKE) producer-image-build
+	docker tag producer:latest localhost:5000/chatgpt:producer && docker push localhost:5000/chatgpt:producer
+
+producer-deploy:
+	$(MAKE) producer-image-push
+	$(MAKE) agent-deployment-refresh
+
+producer-logs:
+	kubectl logs deployment/agent producer -f
 
 agent-build:
 	cd agent ; GOBIN=/usr/local/bin go install "github.com/ingyamilmolinar/doctorgpt/agent" ; cd -
@@ -51,7 +69,12 @@ agent-deployment-refresh:
 	$(MAKE) agent-deployment-create
 
 agent-logs:
-	kubectl logs deployment/agent -f
+	kubectl logs deployment/agent agent -f
+
+all-deploy:
+	$(MAKE) agent-image-push
+	$(MAKE) producer-image-push
+	$(MAKE) agent-deployment-refresh
 
 kube-registry-secret:
 	kubectl delete secret registry-creds || true

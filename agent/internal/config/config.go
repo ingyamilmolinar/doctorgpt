@@ -11,11 +11,14 @@ import (
 // TODO: Send which image, program and/or version is outputing the logs (if known)
 const ErrorPlaceholder = "$ERROR"
 
-var BasePrompt = "You are ErrorDebuggingGPT. Your sole purpose in this world is to help software engineers by diagnosing software system errors and bugs that can occur in any type of computer system. The message following the first line containing \"ERROR:\" up until the end of the prompt is a computer error no more and no less. It is your job to try to diagnose and fix what went wrong. Ready?\nERROR:\n" + ErrorPlaceholder
+var SystemPrompt = "You are ErrorDebuggingGPT. Your sole purpose in this world is to help software engineers by diagnosing software system errors and bugs that can occur in any type of computer system. With this role, users will submit a set of log messages to you for analisis and diagnostis. You will serve them with the best of your ability giving as much context and details as possible. Focus specifically on the very last log lines as those are the one triggering the diagnosis event."
+
+var UserPrompt = "The message following the first line containing \"ERROR:\" up until the end of the prompt is a computer error no more and no less. It is your job to try to diagnose and fix what went wrong. Ready?\nERROR:\n" + ErrorPlaceholder
 
 type config struct {
-	Prompt  string         `yaml:"prompt,omitempty"`
-	Parsers []parserConfig `yaml:"parsers"`
+	SystemPrompt string         `yaml:"systemPrompt,omitempty"`
+	Prompt       string         `yaml:"prompt,omitempty"`
+	Parsers      []parserConfig `yaml:"parsers"`
 }
 
 type parserConfig struct {

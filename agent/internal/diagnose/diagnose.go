@@ -32,8 +32,10 @@ func HandleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model st
 		if err != nil {
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}
-		log.Infof("Prompt: %s", config.BasePrompt)
-		_, err = f.WriteString(fmt.Sprintf("BASE PROMPT:\n%s\n\n", config.BasePrompt))
+		// TODO: Add log line message in diagnosis file
+		log.Infof("System Prompt: %s", config.SystemPrompt)
+		log.Infof("Prompt: %s", config.UserPrompt)
+		_, err = f.WriteString(fmt.Sprintf("SYSTEM PROMPT:\n%s\n\nPROMPT:\n%s\n\n", config.SystemPrompt, config.UserPrompt))
 		if err != nil {
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}
@@ -44,7 +46,7 @@ func HandleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model st
 		if err != nil {
 			return fmt.Errorf("error writing to diagnosis file: %w", err)
 		}
-		suggestion, err := suggestion(model, apiKey, config.BasePrompt, context)
+		suggestion, err := suggestion(model, apiKey, config.SystemPrompt, config.UserPrompt, context)
 		if err != nil {
 			return fmt.Errorf("error diagnosing using the openai API: %w", err)
 		}
@@ -70,14 +72,18 @@ func HandleTrigger(log *zap.SugaredLogger, fileName, outputDir, apiKey, model st
 	return err
 }
 
-func suggestion(model, key, basePrompt, errorMsg string) (string, error) {
-	prompt := strings.Replace(basePrompt, config.ErrorPlaceholder, errorMsg, 1)
+func suggestion(model, key, systemPrompt, userPrompt, errorMsg string) (string, error) {
+	prompt := strings.Replace(userPrompt, config.ErrorPlaceholder, errorMsg, 1)
 	client := openai.NewClient(key)
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
 			Model: model,
 			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: config.SystemPrompt,
+				},
 				{
 					Role:    openai.ChatMessageRoleUser,
 					Content: prompt,
