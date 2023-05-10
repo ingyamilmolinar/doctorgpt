@@ -28,3 +28,8 @@ spec:
             secretKeyRef:
               name: openai-key
               key: key
+      - name: producer
+        image: k3d-registry.localhost:5000/chatgpt:producer
+        imagePullPolicy: Always
+        command: ["/bin/sh", "-c"]
+        args: ["/usr/bin/producer --logfile /linux.log --delay-ms 100 --infinite false"]

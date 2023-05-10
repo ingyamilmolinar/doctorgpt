@@ -115,8 +115,11 @@ func setup(log *zap.SugaredLogger, configFile, outputDir string, configProvider 
 	if err != nil {
 		return nil, fmt.Errorf("config provider failed: %w", err)
 	}
+	if cfg.SystemPrompt != "" {
+		config.SystemPrompt = cfg.SystemPrompt
+	}
 	if cfg.Prompt != "" {
-		config.BasePrompt = cfg.Prompt
+		config.UserPrompt = cfg.Prompt
 	}
 
 	var parsers []parser.Parser
@@ -181,7 +184,7 @@ func MonitorLogLoop(log *zap.SugaredLogger, fileName, outputDir, apiKey, model s
 
 		// Create a new buffer if necessary
 		if _, ok := logBuffers[key]; !ok {
-			logBuffers[key] = buffer.NewLogBuffer(log, bufferSize, maxTokens-len(config.BasePrompt))
+			logBuffers[key] = buffer.NewLogBuffer(log, bufferSize, maxTokens-len(config.SystemPrompt)-len(config.UserPrompt))
 		}
 
 		// Buffer the log entry
